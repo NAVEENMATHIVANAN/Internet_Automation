@@ -1,0 +1,25 @@
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Environment variables
+.env
+.env.*
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Playwright
+playwright/.cache/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
