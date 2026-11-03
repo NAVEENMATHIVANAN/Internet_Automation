@@ -2,11 +2,12 @@
 from fastapi import FastAPI
 
 from app.routes.order_routes import router as order_router
+from app.routes.automation_routes import router as automation_router
 from app.services.database_service import create_database_tables
 
 app = FastAPI(
     title="Internet Order Automation API",
-    description="API for receiving and managing internet connection orders.",
+    description="Customer order management and browser automation",
     version="1.0.0"
 )
 
@@ -17,6 +18,7 @@ def startup_event():
 
 
 app.include_router(order_router)
+app.include_router(automation_router)
 
 
 @app.get("/")
