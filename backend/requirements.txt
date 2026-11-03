@@ -5,3 +5,4 @@ sqlalchemy
 pydantic[email]
 python-dotenv
 playwright
+requests
