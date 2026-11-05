@@ -43,7 +43,7 @@ class ServiceAddressSchema(BaseModel):
     ]
     ownership: Literal["OWN", "RENT"]
     moving_status: bool
-
+    move_in_date: str | None = None
     @field_validator("zip_code")
     @classmethod
     def validate_zip(cls, value):
@@ -61,6 +61,15 @@ class ServiceAddressSchema(BaseModel):
 
         return value
 
+    @field_validator("move_in_date")
+    @classmethod
+    def validate_move_in_date(cls, value):
+        if value is not None and not re.fullmatch(
+            r"\d{2}/\d{2}/\d{4}", value
+        ):
+            raise ValueError("Move-in date must use DD/MM/YYYY format")
+
+        return value
 
 class OrderSchema(BaseModel):
     provider: str
@@ -69,10 +78,45 @@ class OrderSchema(BaseModel):
     internet_speed_mbps: int = Field(gt=0)
     pricing_term: Literal["1_YEAR", "5_YEAR"]
     video_service: bool = False
+    video_package: Literal[
+      "ULTIMATE_TV",
+      "POPULAR_TV",
+      "WORLD_SOCCER_TICKET"
+    ] | None = None
+
     phone_service: bool = False
+    phone_package: Literal[
+    "PROVIDERXX_VOICE_PREMIER"
+    ] | None = None
+
+    now_tv: bool = False
     equipment_type: Literal[
         "LEASED_GATEWAY", "CUSTOMER_OWNED"
     ]
+
+    @model_validator(mode="after")
+    def validate_addon_packages(self):
+        if self.video_service and not self.video_package:
+            raise ValueError(
+                "Select a video package when video_service is enabled"
+            )
+
+        if not self.video_service and self.video_package:
+            raise ValueError(
+                "video_package requires video_service=True"
+            )
+
+        if self.phone_service and not self.phone_package:
+            raise ValueError(
+                "Select a phone package when phone_service is enabled"
+            )
+
+        if not self.phone_service and self.phone_package:
+            raise ValueError(
+                "phone_package requires phone_service=True"
+            )
+
+        return self
 
 class AdditionalAddressSchema(BaseModel):
     address_line_1: str
@@ -92,6 +136,7 @@ class QualificationSchema(BaseModel):
     shipping_same_as_service: bool
     mailing_address: AdditionalAddressSchema | None = None
     shipping_address: AdditionalAddressSchema | None = None
+    account_disclosure_acknowledged: bool = False
 
 
 class InstallationSchema(BaseModel):
@@ -100,6 +145,7 @@ class InstallationSchema(BaseModel):
     ]
     preferred_date: str | None = None
     preferred_time: str | None = None
+    installation_disclosure_acknowledged: bool = False
 
 
 class DisclosureSchema(BaseModel):

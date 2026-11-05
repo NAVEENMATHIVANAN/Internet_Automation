@@ -28,7 +28,7 @@ customer_order = {
         "provider": "XFINITY",
         "customer_type": "NEW",
         "service_category": "INTERNET",
-        "internet_speed_mbps": 300,
+        "internet_speed_mbps": 1000,
         "pricing_term": "1_YEAR",
         "video_service": False,
         "phone_service": False,
@@ -39,14 +39,16 @@ customer_order = {
         "speaking_to_account_holder": True,
         "existing_provider_customer": False,
         "ez_enroll": False,
-        "autopay_paperless_discount": False,
+        "autopay_paperless_discount": True,
         "mailing_same_as_service": True,
-        "shipping_same_as_service": True
+        "shipping_same_as_service": True,
+        "account_disclosure_acknowledged": True
     },
     "installation": {
-        "installation_type": "STANDARD_SHIPPING",
-        "preferred_date": None,
-        "preferred_time": None
+    "installation_type": "PRO_INSTALL",
+    "preferred_date": "2026-11-16",
+    "preferred_time": "Evening",
+    "installation_disclosure_acknowledged": True
     },
     "disclosures": {
         "broadband_label_choice": "NOT_REQUESTED",
