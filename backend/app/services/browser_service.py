@@ -26,16 +26,18 @@ class BrowserService:
     def _step(self, name: str):
         self.steps.append(name)
         print(f'[AUTOMATION] {name}')
-    
-    def _section_pause(self, section: str):
-        delay = random.randint(2000, 4000)
+
+    def _review_pause(self, section: str):
+        delay = random.randint(30, 40)
 
         print(
-            f'[AUTOMATION] Completed: {section}. '
-            f'Waiting {delay / 1000:.1f} seconds...'
+            f"\n[REVIEW] {section} is ready."
+            f"\nCheck the browser and correct any information."
+            f"\nAutomation will continue in {delay} seconds."
         )
 
-        self.page.wait_for_timeout(delay)
+        self.page.wait_for_timeout(delay * 1000)
+    
 
     def _screenshot(self, name: str):
         if self.page:
@@ -92,16 +94,94 @@ class BrowserService:
         state = a['state'].upper()
         self.page.locator('#stateList').select_option(label=STATE_NAMES.get(state, state))
         self.page.locator('#zipcode').fill(a['zip_code'])
-        dwelling = {'HOUSE':'House','CONDO':'Condo','TOWNHOUSE':'Townhouse','APARTMENT':'Apartment'}.get(a['dwelling_type'], a['dwelling_type'])
-        self.page.locator('#serviceAddressTypeList').select_option(label=dwelling)
+                # Select dwelling type using the actual portal options.
+        dwelling_dropdown = self.page.locator(
+            '#serviceAddressTypeList'
+        )
+
+        dwelling_dropdown.wait_for(
+            state='visible',
+            timeout=15000
+        )
+
+        available_options = dwelling_dropdown.locator(
+            'option'
+        ).evaluate_all("""
+            options => options.map(option => ({
+                text: option.textContent.trim(),
+                value: option.value,
+                disabled: option.disabled
+            }))
+        """)
+
+        print("\\n[DWELLING TYPE] Available portal options:")
+        print(json.dumps(available_options, indent=2))
+
+        dwelling_map = {
+            'HOUSE': ['House'],
+            'CONDO': ['Condo'],
+            'DUPLEX': ['Duplex'],
+            'APARTMENT': ['Apartment'],
+            'MOBILE_HOME': ['Mobile Home']
+        }
+
+        requested_type = a['dwelling_type'].upper()
+        candidates = dwelling_map.get(requested_type)
+
+        if not candidates:
+            raise RuntimeError(
+                f'Unsupported dwelling type: {requested_type}'
+            )
+
+        selected_option = next(
+            (
+                option for option in available_options
+                if option['text'].strip().casefold()
+                in [candidate.casefold() for candidate in candidates]
+                and not option['disabled']
+            ),
+            None
+        )
+
+        if not selected_option:
+            raise RuntimeError(
+                f'Could not find dwelling type {requested_type}. '
+                f'Actual portal options: {available_options}'
+            )
+
+        dwelling_dropdown.select_option(
+            value=selected_option['value']
+        )
+
+        print(
+            f"[DWELLING TYPE] Selected: "
+            f"{selected_option['text']}"
+        )
         self.page.locator('#rentOwnList').select_option(label={'OWN':'Own','RENT':'Rent'}[a['ownership']])
         self.page.locator('#customerMove').select_option(label='Yes' if a['moving_status'] else 'No')
+                # Fill move-in date only when the customer is moving.
+        if a.get('moving_status'):
+            move_date = a.get('move_in_date')
+
+            if not move_date:
+                raise RuntimeError(
+                    'Moving customer requires a move-in date.'
+                )
+
+            self.page.locator('#datepicker').wait_for(
+                state='visible',
+                timeout=15000
+            )
+
+            self.page.locator('#datepicker').fill(move_date)
+
         self._screenshot('full_flow_01_basic_information')
         self._step('Submit service address for portal validation')
+        self._review_pause('Basic Information')
         self.page.locator('#basicInfoForward').click()
         self.page.locator('p.green').filter(has_text='Proceed to the next screen').wait_for(state='visible', timeout=60000)
+        self._review_pause('Address Validation')
         self.page.locator('#addressFoundForward').click()
-        self._section_pause('Basic Information and Address Validation')
         self.page.locator('input[type="radio"][value="New"],input[type="radio"][value="Transfer"]').first.wait_for(state='visible', timeout=60000)
 
     def _select_customer_type(self, order: dict[str, Any]):
@@ -112,7 +192,7 @@ class BrowserService:
         if not radio.is_checked(): raise RuntimeError(f'Could not select customer type {value}.')
         self._forward_main()
         self.page.locator('#content_header span.pageTitle').filter(has_text='Recommendations').wait_for(state='visible', timeout=60000)
-        self._section_pause('Customer Type Selection')
+        self._review_pause('Customer Type Selection')
 
     def _select_provider_and_plan(self, order: dict[str, Any]):
         self._step('Select available ProviderXX and open its internet catalogue')
@@ -247,9 +327,9 @@ class BrowserService:
         )
         self._screenshot('full_flow_02_product_details')
         self._step('Add selected plan to order and proceed to checkout')
+        self._review_pause('Provider and Internet Plan Selection')
         self.page.locator('#addToOrderAndCheckout').click()
         self.page.wait_for_url(re.compile(r'.*/checkout/.*'), timeout=60000)
-        self._section_pause('Provider and Internet Plan Selection')
 
     def _checkout_frame(self):
         for _ in range(30):
@@ -363,11 +443,11 @@ class BrowserService:
                 frame, 'phone', r'^None$'
             )
 
-        self._section_pause('video and phone add-on selections')
+        self._review_pause('video and phone add-on selections')
 
         forward = frame.locator('input[type="button"][value*="Forward"]')
         forward.click()
-        self._section_pause('checkout service selections')
+        self._review_pause('checkout service selections')
         frame.wait_for_timeout(500)
         # Broadband labels: select only the choice supplied in the API request.
         label_choice = disclosures['broadband_label_choice']
@@ -380,9 +460,9 @@ class BrowserService:
         equipment_pattern = r'Leased Gateway' if order['equipment_type']=='LEASED_GATEWAY' else r'EQUIPMENT OWN'
         self._choose_radio_by_label(frame, 'equipment', equipment_pattern)
         if order.get('now_tv', False): self._choose_radio_by_label(frame, 'nowtv', r'NOW TV')
+        self._review_pause('checkout broadband label and equipment selections')
         forward = frame.locator('input[type="button"][value*="Forward"]')
         forward.click()
-        self._section_pause('checkout broadband label and equipment selections')
         
         self._step('Fill account-holder and contact information')
 
@@ -494,12 +574,11 @@ class BrowserService:
             )
 
         self._step('Account-holder qualification selections completed')
-
+        self._review_pause('checkout account-holder and contact information')
         # Continue to installation.
         frame.locator(
             'input[type="button"][value*="Forward"]'
         ).click()
-        self._section_pause('checkout account-holder and contact information')
         
         self._step('Continue to installation and payment')
 
@@ -717,11 +796,10 @@ class BrowserService:
             raise RuntimeError(
                 'Forward button appeared but is disabled.'
             )
-
+        self._review_pause('checkout installation confirmation')
         self._step('Click Forward after installation confirmation')
 
         forward.click()
-        self._section_pause('checkout installation selection')
 
         self._step('Wait for Order Summary')
         self.page.wait_for_url(re.compile(r'.*/order-summary/.*'), timeout=60000)

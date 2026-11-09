@@ -64,11 +64,8 @@ class ServiceAddressSchema(BaseModel):
     @field_validator("move_in_date")
     @classmethod
     def validate_move_in_date(cls, value):
-        if value is not None and not re.fullmatch(
-            r"\d{2}/\d{2}/\d{4}", value
-        ):
-            raise ValueError("Move-in date must use DD/MM/YYYY format")
-
+        if value and not re.fullmatch(r"\d{2}/\d{2}/\d{4}", value):
+           raise ValueError("Move-in date must use DD/MM/YYYY format")
         return value
 
 class OrderSchema(BaseModel):
