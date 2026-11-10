@@ -39,7 +39,7 @@ class ServiceAddressSchema(BaseModel):
     city: str
     state: str
     dwelling_type: Literal[
-        "HOUSE", "CONDO", "TOWNHOUSE", "APARTMENT"
+        "HOUSE", "CONDO", "TOWNHOUSE", "APARTMENT", "DUPLEX"
     ]
     ownership: Literal["OWN", "RENT"]
     moving_status: bool

@@ -184,15 +184,81 @@ class BrowserService:
         self.page.locator('#addressFoundForward').click()
         self.page.locator('input[type="radio"][value="New"],input[type="radio"][value="Transfer"]').first.wait_for(state='visible', timeout=60000)
 
-    def _select_customer_type(self, order: dict[str, Any]):
-        self._step('Select New or Transfer customer')
-        value = 'New' if order['customer_type'] == 'NEW' else 'Transfer'
-        radio = self.page.locator(f'input[type="radio"][value="{value}"]:visible').first
-        radio.check()
-        if not radio.is_checked(): raise RuntimeError(f'Could not select customer type {value}.')
+    
+    
+    def _select_customer_type(self, data: dict[str, Any]):
+        customer_type = data["customer_type"]
+
+        self._step("Select Customer Type")
+
+        if customer_type == "NEW":
+            self.page.locator(
+                'input[type="radio"][value="New"]:visible'
+            ).check()
+
+        elif customer_type == "TRANSFER":
+            self.page.locator(
+                'input[type="radio"][value="Transfer"]:visible'
+            ).check()
+
+            # Wait for the provider section
+            provider_section = self.page.locator("#existingProviderDiv")
+            provider_section.wait_for(
+                state="visible",
+                timeout=15000
+            )
+
+            # Locate ProviderXX using its actual HTML name
+            provider_checkbox = self.page.locator(
+                '#existingProvidersSpan input[type="checkbox"][name="ProviderXX"]'
+            )
+
+            provider_checkbox.wait_for(
+                state="visible",
+                timeout=15000
+            )
+
+            # Select ProviderXX
+            provider_checkbox.check()
+
+            # Verify selection
+            if not provider_checkbox.is_checked():
+                raise RuntimeError(
+                    "ProviderXX checkbox selection failed."
+                )
+
+            print("[SUCCESS] ProviderXX selected.")
+
+            self._review_pause("Transfer Provider Selection")
+
+        else:
+            raise ValueError(
+                f"Unsupported customer type: {customer_type}"
+            )
+
+        # Continue the existing portal flow
         self._forward_main()
-        self.page.locator('#content_header span.pageTitle').filter(has_text='Recommendations').wait_for(state='visible', timeout=60000)
-        self._review_pause('Customer Type Selection')
+
+        # Wait for the visible Recommendations page heading
+        recommendations_heading = self.page.locator(
+            "#content_header span.pageTitle"
+       )
+
+        recommendations_heading.wait_for(
+            state="visible",
+            timeout=30000
+       )
+
+        heading_text = recommendations_heading.inner_text().strip()
+
+        if "Recommendations" not in heading_text:
+            raise RuntimeError(
+                f"Unexpected page heading: {heading_text}"
+            )
+
+        print("[SUCCESS] Recommendations page loaded.")
+
+
 
     def _select_provider_and_plan(self, order: dict[str, Any]):
         self._step('Select available ProviderXX and open its internet catalogue')
