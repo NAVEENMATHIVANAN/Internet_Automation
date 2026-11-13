@@ -1,0 +1,333 @@
+[
+    {
+        "frame_index": 0,
+        "frame_url": "https://test-site-working-09878.newapps.net/tellcom/recommendations/",
+        "matches": [
+            [
+                {
+                    "tag": "TD",
+                    "id": "",
+                    "className": "",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<td>ProviderXX</td>"
+                },
+                {
+                    "tag": "TR",
+                    "id": "",
+                    "className": "",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<tr title=\"SUCCESS\"><td>ProviderXX</td><td>Available</td></tr>"
+                },
+                {
+                    "tag": "TBODY",
+                    "id": "",
+                    "className": "",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<tbody><tr title=\"\"><td>ProviderVZ 5G</td><td>Not Available</td></tr><tr title=\"Out of Footprint\"><td>ProviderSP Integrated</td><td>Not Available</td></tr><tr title=\"Serviceability successfully sent request to CODA: message processing in-progress\"><td>ProviderVZ IG</td><td>Pending</td></tr><tr title=\"SUCCESS\"><td>ProviderXX</td><td>Available</td></tr><tr title=\"SUCCESS\"><td>ProviderAT IG</td><td>Pending</td></tr><tr title=\"Not Available\"><td>ProviderTM IG</td><td>Not Available</td></tr><tr title=\"Address Not in ProviderWO IG Serviceable Area\"><td>ProviderWO IG</td><td>Not Available</td></tr><tr title=\"Address Not in ProviderFR IG Serviceable Area\"><td>ProviderFR IG</td><td>Not Available</td></tr><tr title=\"Not Available\"><td>ProviderEL IG</td><td>Not Available</td></tr></tbody>"
+                },
+                {
+                    "tag": "TABLE",
+                    "id": "rts_widget_content",
+                    "className": "",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<table id=\"rts_widget_content\" cellpadding=\"0\" cellspacing=\"0\"><tbody><tr title=\"\"><td>ProviderVZ 5G</td><td>Not Available</td></tr><tr title=\"Out of Footprint\"><td>ProviderSP Integrated</td><td>Not Available</td></tr><tr title=\"Serviceability successfully sent request to CODA: message processing in-progress\"><td>ProviderVZ IG</td><td>Pending</td></tr><tr title=\"SUCCESS\"><td>ProviderXX</td><td>Available</td></tr><tr title=\"SUCCESS\"><td>ProviderAT IG</td><td>Pending</td></tr><tr title=\"Not Available\"><td>ProviderTM IG</td><td>Not Available</td></tr><tr title=\"Address Not in ProviderWO IG Serviceable Area\"><td>ProviderWO IG</td><td>Not Available</td></tr><tr title=\"Address Not in ProviderFR IG Serviceable Area\"><td>ProviderFR IG</td><td>Not Available</td></tr><tr title=\"Not Available\"><td>ProviderEL IG</td><td>Not Available</td></tr></tbody></table>"
+                },
+                {
+                    "tag": "DIV",
+                    "id": "reaiTimeContentDataId",
+                    "className": "",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div id=\"reaiTimeContentDataId\">\n\t\t\t\t\t\t\t\t<table id=\"rts_widget_content\" cellpadding=\"0\" cellspacing=\"0\"><tbody><tr title=\"\"><td>ProviderVZ 5G</td><td>Not Available</td></tr><tr title=\"Out of Footprint\"><td>ProviderSP Integrated</td><td>Not Available</td></tr><tr title=\"Serviceability successfully sent request to CODA: message processing in-progress\"><td>ProviderVZ IG</td><td>Pending</td></tr><tr title=\"SUCCESS\"><td>ProviderXX</td><td>Available</td></tr><tr title=\"SUCCESS\"><td>ProviderAT IG</td><td>Pending</td></tr><tr title=\"Not Available\"><td>ProviderTM IG</td><td>Not Available</td></tr><tr title=\"Address Not in ProviderWO IG Serviceable Area\"><td>ProviderWO IG</td><td>Not Available</td></tr><tr title=\"Address Not in ProviderFR IG Serviceable Area\"><td>ProviderFR IG</td><td>Not Available</td></tr><tr title=\"Not Available\"><td>ProviderEL IG</td><td>Not Available</td></tr></tbody></table>\n\t\t\t\t\t\t\t\t<div id=\"dataRefreshDiv\" style=\"display: none;\">\n\t\t\t\t\t\t\t\t\t<a id=\"dataRefresh\" class=\"reload\" title=\"More products available\">Refresh</a>\n\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t\t<div id=\"afterDataRefreshDiv\" style=\"display: none;color: #FF0063\">Products Refreshed</div>\n\t\t\t\t\t\t\t</div>"
+                },
+                {
+                    "tag": "DIV",
+                    "id": "",
+                    "className": "rts_container",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div class=\"rts_container\">\n\t\t\t\t\t\t\t<div class=\"pdet_tabs\">\n\t\t\t\t\t\t\t\t\t\t<div class=\"realtime_widget_tab\" id=\"realTimeStatusDivId\" style=\"background-color: rgb(151, 212, 68);\" aria-selected=\"true\">Real Time Status&nbsp;&nbsp;</div>\n\t\t\t\t\t\t\t\t\t\t<div class=\"filter_widget_tab\" id=\"filterProductsDivId\" style=\"display: none; background-color: rgb(102, 102, 102);\" aria-selected=\"false\">&nbsp;&nbsp;Filter Products</div>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t<div style=\"border-bottom: 1px solid #000; padding-bottom:1px;\">\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t<div id=\"reaiTimeContentDataId\">\n\t\t\t\t\t\t\t\t<table id=\"rts_widget_content\" cellpadding=\"0\" cellspacing=\"0\"><tbody><tr title=\"\"><td>ProviderVZ 5G</td><td>Not Available</td></tr><tr title=\"Out of Footprint\"><td>ProviderSP Integrated</td><td>Not Available</td></tr><tr title=\"Serviceability successfully sent request to CODA: message processing in-progress\"><td>ProviderVZ IG</td><td>Pending</td></tr><tr title=\"SUCCESS\"><td>ProviderXX</td><td>Available</td></tr><tr title=\"SUCCESS\"><td>ProviderAT IG</td><td>Pending</td></tr><tr title=\"Not Available\"><td>ProviderTM IG</td><td>Not Available</td></tr><tr title=\"Address Not in ProviderWO IG Serviceable Area\"><td>ProviderWO IG</td><td>Not Available</td></tr><tr title=\"Address Not in ProviderFR IG Serviceable Area\"><td>ProviderFR IG</td><td>Not Available</td></tr><tr title=\"Not Available\"><td>ProviderEL IG</td><td>Not Available</td></tr></tbody></table>\n\t\t\t\t\t\t\t\t<div id=\"dataRefreshDiv\" style=\"display: none;\">\n\t\t\t\t\t\t\t\t\t<a id=\"dataRefr"
+                },
+                {
+                    "tag": "DIV",
+                    "id": "",
+                    "className": "rts_widget",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div class=\"rts_widget\" data-ng-controller=\"realContentController\" data-ng-init=\"init()\">\n\t\t\t\t\t\t<div class=\"rts_container\">\n\t\t\t\t\t\t\t<div class=\"pdet_tabs\">\n\t\t\t\t\t\t\t\t\t\t<div class=\"realtime_widget_tab\" id=\"realTimeStatusDivId\" style=\"background-color: rgb(151, 212, 68);\" aria-selected=\"true\">Real Time Status&nbsp;&nbsp;</div>\n\t\t\t\t\t\t\t\t\t\t<div class=\"filter_widget_tab\" id=\"filterProductsDivId\" style=\"display: none; background-color: rgb(102, 102, 102);\" aria-selected=\"false\">&nbsp;&nbsp;Filter Products</div>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t<div style=\"border-bottom: 1px solid #000; padding-bottom:1px;\">\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t<div id=\"reaiTimeContentDataId\">\n\t\t\t\t\t\t\t\t<table id=\"rts_widget_content\" cellpadding=\"0\" cellspacing=\"0\"><tbody><tr title=\"\"><td>ProviderVZ 5G</td><td>Not Available</td></tr><tr title=\"Out of Footprint\"><td>ProviderSP Integrated</td><td>Not Available</td></tr><tr title=\"Serviceability successfully sent request to CODA: message processing in-progress\"><td>ProviderVZ IG</td><td>Pending</td></tr><tr title=\"SUCCESS\"><td>ProviderXX</td><td>Available</td></tr><tr title=\"SUCCESS\"><td>ProviderAT IG</td><td>Pending</td></tr><tr title=\"Not Available\"><td>ProviderTM IG</td><td>Not Available</td></tr><tr title=\"Address Not in ProviderWO IG Serviceable Area\"><td>ProviderWO IG</td><td>Not Available</td></tr><tr title=\"Address Not in ProviderFR IG Serviceable Area\"><td>ProviderFR IG</td><td>Not Available</td></tr><tr title=\"Not Available\"><td>ProviderEL IG</td><td>Not Available</td></tr></"
+                }
+            ],
+            [
+                {
+                    "tag": "DIV",
+                    "id": "",
+                    "className": "popupheadcont",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div class=\"popupheadcont\">\n    PROVIDERXX \n  </div>"
+                },
+                {
+                    "tag": "DIV",
+                    "id": "26069942",
+                    "className": "",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div id=\"26069942\"> \n  <div class=\"popupheadcont\">\n    PROVIDERXX \n  </div> \n  <ul> \n   <li>High speed broadband internet connection.</li> \n   <li>Fast and reliable WIFI.</li> \n   <li>No money due today for qualified customers. Customers are billed for services in advance shortly after install. </li> \n  </ul> \n </div>"
+                },
+                {
+                    "tag": "DIV",
+                    "id": "SalesTipData",
+                    "className": "",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div id=\"SalesTipData\"> \n <div id=\"24699452\"> \n  <div class=\"popupheadcont\">\n    ProviderAT \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection</li> \n   <li>Secured WIFI access to the ProviderAT Wireless Hotspots nationwide</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"4353598\"> \n  <div class=\"popupheadcont\">\n    PROVIDERVZ \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection.</li> \n   <li>Lightening fast symetrical upload/download internet speeds.</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"15498701\"> \n  <div class=\"popupheadcont\">\n    PROVIDERVZ \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection.</li> \n   <li>Lightening fast symetrical upload/download internet speeds.</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"32937483\"> \n  <div class=\"popupheadcont\">\n    FRONTIER \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection.</li> \n   <li>Fast and reliable WIFI.</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"114\"> \n  <div class=\"popupheadcont\">\n    ProviderSP \n  </div> \n  <ul> \n   <li>High speed broadband internet connection with No Data Caps</li> \n   <li>Access to thousands of WIFI Hot Spots.</li> "
+                },
+                {
+                    "tag": "DIV",
+                    "id": "salesTipsDataContent",
+                    "className": "",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div id=\"salesTipsDataContent\" style=\"display:none;\"><div id=\"SalesTipData\"> \n <div id=\"24699452\"> \n  <div class=\"popupheadcont\">\n    ProviderAT \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection</li> \n   <li>Secured WIFI access to the ProviderAT Wireless Hotspots nationwide</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"4353598\"> \n  <div class=\"popupheadcont\">\n    PROVIDERVZ \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection.</li> \n   <li>Lightening fast symetrical upload/download internet speeds.</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"15498701\"> \n  <div class=\"popupheadcont\">\n    PROVIDERVZ \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection.</li> \n   <li>Lightening fast symetrical upload/download internet speeds.</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"32937483\"> \n  <div class=\"popupheadcont\">\n    FRONTIER \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection.</li> \n   <li>Fast and reliable WIFI.</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"114\"> \n  <div class=\"popupheadcont\">\n    ProviderSP \n  </div> \n  <ul> \n   <li>High speed broadband internet connection with No Data Caps</li>"
+                },
+                {
+                    "tag": "DIV",
+                    "id": "recommendationController",
+                    "className": "",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div id=\"recommendationController\" data-ng-controller=\"recommendationController\" data-ng-init=\"init()\">\n<div id=\"recommendationsDiv\">\n   <section id=\"contentfullcont\">\n      <header id=\"content_header\">\n         <div class=\"row\">\n            <span class=\"cell\">\n               <svg version=\"1.1\" id=\"Layer_5\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" x=\"0px\" y=\"0px\" width=\"29px\" height=\"29px\" viewBox=\"0 0 29 29\" enable-background=\"new 0 0 29 29\" xml:space=\"preserve\" class=\"headphonesSVG\">\n                  <g>\n                     <path fill=\"#96C43E\" d=\"M29,25.298c0,2.066-1.677,3.744-3.744,3.744H4.411c-2.067,0-3.745-1.678-3.745-3.744V4.328\n                        c0-2.068,1.678-3.745,3.745-3.745h20.845C27.323,0.583,29,2.26,29,4.328V25.298z\"></path>\n                     <path fill=\"#FFFFFF\" d=\"M23.861,18.677c0.116,0.435,0.177,0.891,0.177,1.362c0,2.921-2.367,5.289-5.288,5.289\n                        c-0.291,0-0.576-0.023-0.854-0.068l-0.004-0.002c-0.285,0.446-0.843,0.75-1.482,0.75c-0.932,0-1.686-0.64-1.686-1.428\n                        s0.754-1.428,1.686-1.428c0.563,0,1.061,0.234,1.367,0.594l0,0c0.208,0.029,0.422,0.044,0.641,0.044\n                        c2.19,0,3.967-1.542,3.967-3.445c0-0.307-0.046-0.604-0.132-0.887l-0.052,0.015c-0.244,0.015-0.527,0.008-0.855-0.031v0.608\n                        c0,0-0.059,0.398-0.808,0.375s-0.784-0.234-0.796-0.445c-0.012-0.21,0-5.5,0-5.5s0.047-0.409,0.819-0.397\n                        c0.655,0.012,0.737,0.246,"
+                },
+                {
+                    "tag": "SECTION",
+                    "id": "maincontent",
+                    "className": "",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<section id=\"maincontent\">\n\t\t\t\t\t<section class=\"navcontainer\">\n  <nav id=\"products\">\n                \t<ul class=\"productsNav\">\n\t\t                      \t<li class=\"prodcutsBtn\">\n\t\t                    \t\t<a href=\"#\" data-ac-href=\"/salescenter/salescenter/saas?execution=e3s5&amp;_eventId=recommendationsEvent&amp;CategoryName=PP\" aria-current=\"true\">\n\t\t                        \t\t<img src=\"../../allconnect/assets/media/ce641c9d1e66.jpg\" width=\"46\" height=\"39\" alt=\"Power Pitch\" border=\"0\">\n\t\t                            \t<label id=\"productLabel\" class=\"productLabel\" value=\"PP\" for=\"PP\">Insights</label>\n\t\t                            </a>\n\t\t                        </li>\n                        \t<li class=\"prodcutsBtn\" style=\"width:72px;\">\n\t                    \t\t<a href=\"#\" data-ac-href=\"/salescenter/salescenter/saas?execution=e3s5&amp;_eventId=recommendationsEvent&amp;CategoryName=TRIPLE_PLAY\">\n\t\t                        \t<img src=\"../../allconnect/assets/media/6787cace4d55.png\" width=\"46\" height=\"39\" alt=\"Triples\" border=\"0\">\n\t\t                            <label id=\"productLabel\" class=\"productLabel\" value=\"TRIPLE_PLAY\" for=\"Triples\">Triples</label> \n\t                            </a>\n\t                            <ul style=\"width:160px;\">\n\t\t\t\t\t\t\t\t\t<li><a href=\"#\" id=\"TRIPLE_PLAY_IMP\" class=\"doubleplay_sub\" style=\"width:150px;\" data-ac-href=\"/salescenter/salescenter/saas?execution=e3s5&amp;_eventId=recommendationsEvent&amp;CategoryName=TRIPLE_PLAY_IMP\">INTERNEProviderTM-PHONE</a></li>\n\t\t\t"
+                },
+                {
+                    "tag": "ARTICLE",
+                    "id": "mainsection",
+                    "className": "",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<article id=\"mainsection\">\n\t\t\t\t<aside id=\"left_aside\">\n<link rel=\"stylesheet\" href=\"../../allconnect/assets/css/8098583303aa.css\">\n<link rel=\"stylesheet\" href=\"../../allconnect/assets/css/adc83b19e793.css\">\n<input type=\"hidden\" value=\"\" id=\"tempData\" autocomplete=\"off\">\n<input type=\"hidden\" id=\"contextPath\" value=\"/salescenter\" autocomplete=\"off\">\n\t<form name=\"existingCustomer\" id=\"existingCustomer\" method=\"post\" autocomplete=\"off\" class=\"ng-pristine ng-valid\" data-ac-action=\"/salescenter/salescenter/saas?execution=e3s5\">\n\t\t<input type=\"hidden\" id=\"contextPath\" value=\"/salescenter\" autocomplete=\"off\">\n\t\t<input type=\"hidden\" id=\"_eventId\" name=\"_eventId\" value=\"existingCustomerEvent\" autocomplete=\"off\">\n\t\t<input type=\"hidden\" id=\"customerId\" value=\"100000002\" autocomplete=\"off\">\n\t\t<input type=\"hidden\" id=\"orderId\" value=\"100000001\" name=\"orderId\" autocomplete=\"off\">\t\n\t\t<input type=\"hidden\" id=\"mamAddress\" value=\"\" name=\"mamAddress\" autocomplete=\"off\">\n\t\t<input type=\"hidden\" id=\"ACP\" value=\"\" name=\"ACP\" autocomplete=\"off\">\n\t\t<input type=\"hidden\" id=\"addressCorrection\" value=\"\" name=\"addressCorrection\" autocomplete=\"off\">\t\t\t\n\t\t<input type=\"hidden\" id=\"pageTitleName\" value=\"\" name=\"pageTitleName\" autocomplete=\"off\">\t\t\t\t\t       \n\t\t<input type=\"hidden\" id=\"providerExternalId\" name=\"providerExternalId\" value=\"\" autocomplete=\"off\">\n\t\t<input type=\"hidden\" id=\"existingCustomerId\" name=\"isexistingCustomer\" value=\"\" autocomplete=\"off\">\n\t\t<input type=\"hidden\" id=\"existingProviderName\" nam"
+                }
+            ],
+            [
+                {
+                    "tag": "DIV",
+                    "id": "",
+                    "className": "popupheadcont ",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div class=\"popupheadcont \">\n    PROVIDERXX \n  </div>"
+                },
+                {
+                    "tag": "DIV",
+                    "id": "salestipSpanish26069942",
+                    "className": "",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div id=\"salestipSpanish26069942\"> \n  <div class=\"popupheadcont \">\n    PROVIDERXX \n  </div> \n  <ul> \n   <li> Conexión a Internet de banda ancha de alta velocidad. </li> \n   <li> WIFI rápido y confiable. </li> \n   <li> Hoy no se debe dinero por Clientes calificados. Se factura a los clientes por los servicios por adelantado poco después de la instalación. </li> \n  </ul> \n </div>"
+                },
+                {
+                    "tag": "DIV",
+                    "id": "SalesTipData",
+                    "className": "",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div id=\"SalesTipData\"> \n <div id=\"24699452\"> \n  <div class=\"popupheadcont\">\n    ProviderAT \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection</li> \n   <li>Secured WIFI access to the ProviderAT Wireless Hotspots nationwide</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"4353598\"> \n  <div class=\"popupheadcont\">\n    PROVIDERVZ \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection.</li> \n   <li>Lightening fast symetrical upload/download internet speeds.</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"15498701\"> \n  <div class=\"popupheadcont\">\n    PROVIDERVZ \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection.</li> \n   <li>Lightening fast symetrical upload/download internet speeds.</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"32937483\"> \n  <div class=\"popupheadcont\">\n    FRONTIER \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection.</li> \n   <li>Fast and reliable WIFI.</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"114\"> \n  <div class=\"popupheadcont\">\n    ProviderSP \n  </div> \n  <ul> \n   <li>High speed broadband internet connection with No Data Caps</li> \n   <li>Access to thousands of WIFI Hot Spots.</li> "
+                },
+                {
+                    "tag": "DIV",
+                    "id": "salesTipsDataContent",
+                    "className": "",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div id=\"salesTipsDataContent\" style=\"display:none;\"><div id=\"SalesTipData\"> \n <div id=\"24699452\"> \n  <div class=\"popupheadcont\">\n    ProviderAT \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection</li> \n   <li>Secured WIFI access to the ProviderAT Wireless Hotspots nationwide</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"4353598\"> \n  <div class=\"popupheadcont\">\n    PROVIDERVZ \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection.</li> \n   <li>Lightening fast symetrical upload/download internet speeds.</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"15498701\"> \n  <div class=\"popupheadcont\">\n    PROVIDERVZ \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection.</li> \n   <li>Lightening fast symetrical upload/download internet speeds.</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"32937483\"> \n  <div class=\"popupheadcont\">\n    FRONTIER \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection.</li> \n   <li>Fast and reliable WIFI.</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"114\"> \n  <div class=\"popupheadcont\">\n    ProviderSP \n  </div> \n  <ul> \n   <li>High speed broadband internet connection with No Data Caps</li>"
+                },
+                {
+                    "tag": "DIV",
+                    "id": "recommendationController",
+                    "className": "",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div id=\"recommendationController\" data-ng-controller=\"recommendationController\" data-ng-init=\"init()\">\n<div id=\"recommendationsDiv\">\n   <section id=\"contentfullcont\">\n      <header id=\"content_header\">\n         <div class=\"row\">\n            <span class=\"cell\">\n               <svg version=\"1.1\" id=\"Layer_5\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" x=\"0px\" y=\"0px\" width=\"29px\" height=\"29px\" viewBox=\"0 0 29 29\" enable-background=\"new 0 0 29 29\" xml:space=\"preserve\" class=\"headphonesSVG\">\n                  <g>\n                     <path fill=\"#96C43E\" d=\"M29,25.298c0,2.066-1.677,3.744-3.744,3.744H4.411c-2.067,0-3.745-1.678-3.745-3.744V4.328\n                        c0-2.068,1.678-3.745,3.745-3.745h20.845C27.323,0.583,29,2.26,29,4.328V25.298z\"></path>\n                     <path fill=\"#FFFFFF\" d=\"M23.861,18.677c0.116,0.435,0.177,0.891,0.177,1.362c0,2.921-2.367,5.289-5.288,5.289\n                        c-0.291,0-0.576-0.023-0.854-0.068l-0.004-0.002c-0.285,0.446-0.843,0.75-1.482,0.75c-0.932,0-1.686-0.64-1.686-1.428\n                        s0.754-1.428,1.686-1.428c0.563,0,1.061,0.234,1.367,0.594l0,0c0.208,0.029,0.422,0.044,0.641,0.044\n                        c2.19,0,3.967-1.542,3.967-3.445c0-0.307-0.046-0.604-0.132-0.887l-0.052,0.015c-0.244,0.015-0.527,0.008-0.855-0.031v0.608\n                        c0,0-0.059,0.398-0.808,0.375s-0.784-0.234-0.796-0.445c-0.012-0.21,0-5.5,0-5.5s0.047-0.409,0.819-0.397\n                        c0.655,0.012,0.737,0.246,"
+                },
+                {
+                    "tag": "SECTION",
+                    "id": "maincontent",
+                    "className": "",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<section id=\"maincontent\">\n\t\t\t\t\t<section class=\"navcontainer\">\n  <nav id=\"products\">\n                \t<ul class=\"productsNav\">\n\t\t                      \t<li class=\"prodcutsBtn\">\n\t\t                    \t\t<a href=\"#\" data-ac-href=\"/salescenter/salescenter/saas?execution=e3s5&amp;_eventId=recommendationsEvent&amp;CategoryName=PP\" aria-current=\"true\">\n\t\t                        \t\t<img src=\"../../allconnect/assets/media/ce641c9d1e66.jpg\" width=\"46\" height=\"39\" alt=\"Power Pitch\" border=\"0\">\n\t\t                            \t<label id=\"productLabel\" class=\"productLabel\" value=\"PP\" for=\"PP\">Insights</label>\n\t\t                            </a>\n\t\t                        </li>\n                        \t<li class=\"prodcutsBtn\" style=\"width:72px;\">\n\t                    \t\t<a href=\"#\" data-ac-href=\"/salescenter/salescenter/saas?execution=e3s5&amp;_eventId=recommendationsEvent&amp;CategoryName=TRIPLE_PLAY\">\n\t\t                        \t<img src=\"../../allconnect/assets/media/6787cace4d55.png\" width=\"46\" height=\"39\" alt=\"Triples\" border=\"0\">\n\t\t                            <label id=\"productLabel\" class=\"productLabel\" value=\"TRIPLE_PLAY\" for=\"Triples\">Triples</label> \n\t                            </a>\n\t                            <ul style=\"width:160px;\">\n\t\t\t\t\t\t\t\t\t<li><a href=\"#\" id=\"TRIPLE_PLAY_IMP\" class=\"doubleplay_sub\" style=\"width:150px;\" data-ac-href=\"/salescenter/salescenter/saas?execution=e3s5&amp;_eventId=recommendationsEvent&amp;CategoryName=TRIPLE_PLAY_IMP\">INTERNEProviderTM-PHONE</a></li>\n\t\t\t"
+                },
+                {
+                    "tag": "ARTICLE",
+                    "id": "mainsection",
+                    "className": "",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<article id=\"mainsection\">\n\t\t\t\t<aside id=\"left_aside\">\n<link rel=\"stylesheet\" href=\"../../allconnect/assets/css/8098583303aa.css\">\n<link rel=\"stylesheet\" href=\"../../allconnect/assets/css/adc83b19e793.css\">\n<input type=\"hidden\" value=\"\" id=\"tempData\" autocomplete=\"off\">\n<input type=\"hidden\" id=\"contextPath\" value=\"/salescenter\" autocomplete=\"off\">\n\t<form name=\"existingCustomer\" id=\"existingCustomer\" method=\"post\" autocomplete=\"off\" class=\"ng-pristine ng-valid\" data-ac-action=\"/salescenter/salescenter/saas?execution=e3s5\">\n\t\t<input type=\"hidden\" id=\"contextPath\" value=\"/salescenter\" autocomplete=\"off\">\n\t\t<input type=\"hidden\" id=\"_eventId\" name=\"_eventId\" value=\"existingCustomerEvent\" autocomplete=\"off\">\n\t\t<input type=\"hidden\" id=\"customerId\" value=\"100000002\" autocomplete=\"off\">\n\t\t<input type=\"hidden\" id=\"orderId\" value=\"100000001\" name=\"orderId\" autocomplete=\"off\">\t\n\t\t<input type=\"hidden\" id=\"mamAddress\" value=\"\" name=\"mamAddress\" autocomplete=\"off\">\n\t\t<input type=\"hidden\" id=\"ACP\" value=\"\" name=\"ACP\" autocomplete=\"off\">\n\t\t<input type=\"hidden\" id=\"addressCorrection\" value=\"\" name=\"addressCorrection\" autocomplete=\"off\">\t\t\t\n\t\t<input type=\"hidden\" id=\"pageTitleName\" value=\"\" name=\"pageTitleName\" autocomplete=\"off\">\t\t\t\t\t       \n\t\t<input type=\"hidden\" id=\"providerExternalId\" name=\"providerExternalId\" value=\"\" autocomplete=\"off\">\n\t\t<input type=\"hidden\" id=\"existingCustomerId\" name=\"isexistingCustomer\" value=\"\" autocomplete=\"off\">\n\t\t<input type=\"hidden\" id=\"existingProviderName\" nam"
+                }
+            ],
+            [
+                {
+                    "tag": "B",
+                    "id": "",
+                    "className": "logoname",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<b class=\"logoname\" style=\"display: inline-block; margin-top: 5px;\">ProviderXX</b>"
+                },
+                {
+                    "tag": "DIV",
+                    "id": "",
+                    "className": "popupheadcont",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div class=\"popupheadcont\"> \n     <b class=\"logoname\" style=\"display: inline-block; margin-top: 5px;\">ProviderXX</b> \n    </div>"
+                },
+                {
+                    "tag": "DIV",
+                    "id": "",
+                    "className": "optioncont",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div class=\"optioncont\"> \n    <div class=\"popupheadcont\"> \n     <b class=\"logoname\" style=\"display: inline-block; margin-top: 5px;\">ProviderXX</b> \n    </div> \n    <div class=\"optiondetls thinscroll\"> \n     <p style=\"margin: 0px 0px 6px 0px;\"><u>Who can process an order</u>= <span style=\"font-weight: bold;\">NEW:</span> Account Holder, 3rd Party After Credit-Check <span style=\"font-weight: bold;\">TRANSFER: </span>Account Holder </p> \n     <p style=\"margin: 0px 0px 6px 0px;\"> <u>Credit Check</u> = Account Holder. </p> \n     <p style=\"margin: 0px 0px 6px 0px;\"> <u>Pay 1-time fees</u> = Account Holder. Third party may pay fees with verbal authorization. </p> \n     <p style=\"margin: 0px 0px 6px 0px;\"> <u>First Bill </u> = Paper bill received 15 days after install.</p> \n     <p style=\"margin: 0px 0px 6px 0px;\"> <u>Contract</u> = 1 Year: $110 ETF prorated. 2 Year: $230 prorated ETF. 30-Day grace period. Month 2 Month. </p> \n     <p style=\"margin: 0px 0px 6px 0px;\"> <u>SUSPENSION</u> = Suspend up to 9 months of the year. $9.95/mo. </p> \n     <p style=\"margin: 0px 0px 6px 0px;\"> <u>Deposit</u>=<span style=\"font-weight: bold;\">cust will receive the deposit back. Time period varies.</span> </p> \n    </div> \n   </div>"
+                },
+                {
+                    "tag": "DIV",
+                    "id": "",
+                    "className": "popupheadcont1",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div class=\"popupheadcont1\"> \n   <div class=\"optioncont\"> \n    <div class=\"popupheadcont\"> \n     <b class=\"logoname\" style=\"display: inline-block; margin-top: 5px;\">ProviderXX</b> \n    </div> \n    <div class=\"optiondetls thinscroll\"> \n     <p style=\"margin: 0px 0px 6px 0px;\"><u>Who can process an order</u>= <span style=\"font-weight: bold;\">NEW:</span> Account Holder, 3rd Party After Credit-Check <span style=\"font-weight: bold;\">TRANSFER: </span>Account Holder </p> \n     <p style=\"margin: 0px 0px 6px 0px;\"> <u>Credit Check</u> = Account Holder. </p> \n     <p style=\"margin: 0px 0px 6px 0px;\"> <u>Pay 1-time fees</u> = Account Holder. Third party may pay fees with verbal authorization. </p> \n     <p style=\"margin: 0px 0px 6px 0px;\"> <u>First Bill </u> = Paper bill received 15 days after install.</p> \n     <p style=\"margin: 0px 0px 6px 0px;\"> <u>Contract</u> = 1 Year: $110 ETF prorated. 2 Year: $230 prorated ETF. 30-Day grace period. Month 2 Month. </p> \n     <p style=\"margin: 0px 0px 6px 0px;\"> <u>SUSPENSION</u> = Suspend up to 9 months of the year. $9.95/mo. </p> \n     <p style=\"margin: 0px 0px 6px 0px;\"> <u>Deposit</u>=<span style=\"font-weight: bold;\">cust will receive the deposit back. Time period varies.</span> </p> \n    </div> \n   </div> \n  </div>"
+                },
+                {
+                    "tag": "DIV",
+                    "id": "providerComparison15501641",
+                    "className": "",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div id=\"providerComparison15501641\"> \n  <div class=\"popupheadcont1\"> \n   <div class=\"optioncont\"> \n    <div class=\"popupheadcont\"> \n     <b class=\"logoname\" style=\"display: inline-block; margin-top: 5px;\">ProviderXX</b> \n    </div> \n    <div class=\"optiondetls thinscroll\"> \n     <p style=\"margin: 0px 0px 6px 0px;\"><u>Who can process an order</u>= <span style=\"font-weight: bold;\">NEW:</span> Account Holder, 3rd Party After Credit-Check <span style=\"font-weight: bold;\">TRANSFER: </span>Account Holder </p> \n     <p style=\"margin: 0px 0px 6px 0px;\"> <u>Credit Check</u> = Account Holder. </p> \n     <p style=\"margin: 0px 0px 6px 0px;\"> <u>Pay 1-time fees</u> = Account Holder. Third party may pay fees with verbal authorization. </p> \n     <p style=\"margin: 0px 0px 6px 0px;\"> <u>First Bill </u> = Paper bill received 15 days after install.</p> \n     <p style=\"margin: 0px 0px 6px 0px;\"> <u>Contract</u> = 1 Year: $110 ETF prorated. 2 Year: $230 prorated ETF. 30-Day grace period. Month 2 Month. </p> \n     <p style=\"margin: 0px 0px 6px 0px;\"> <u>SUSPENSION</u> = Suspend up to 9 months of the year. $9.95/mo. </p> \n     <p style=\"margin: 0px 0px 6px 0px;\"> <u>Deposit</u>=<span style=\"font-weight: bold;\">cust will receive the deposit back. Time period varies.</span> </p> \n    </div> \n   </div> \n  </div> \n </div>"
+                },
+                {
+                    "tag": "DIV",
+                    "id": "SalesTipData",
+                    "className": "",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div id=\"SalesTipData\"> \n <div id=\"24699452\"> \n  <div class=\"popupheadcont\">\n    ProviderAT \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection</li> \n   <li>Secured WIFI access to the ProviderAT Wireless Hotspots nationwide</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"4353598\"> \n  <div class=\"popupheadcont\">\n    PROVIDERVZ \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection.</li> \n   <li>Lightening fast symetrical upload/download internet speeds.</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"15498701\"> \n  <div class=\"popupheadcont\">\n    PROVIDERVZ \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection.</li> \n   <li>Lightening fast symetrical upload/download internet speeds.</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"32937483\"> \n  <div class=\"popupheadcont\">\n    FRONTIER \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection.</li> \n   <li>Fast and reliable WIFI.</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"114\"> \n  <div class=\"popupheadcont\">\n    ProviderSP \n  </div> \n  <ul> \n   <li>High speed broadband internet connection with No Data Caps</li> \n   <li>Access to thousands of WIFI Hot Spots.</li> "
+                },
+                {
+                    "tag": "DIV",
+                    "id": "salesTipsDataContent",
+                    "className": "",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div id=\"salesTipsDataContent\" style=\"display:none;\"><div id=\"SalesTipData\"> \n <div id=\"24699452\"> \n  <div class=\"popupheadcont\">\n    ProviderAT \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection</li> \n   <li>Secured WIFI access to the ProviderAT Wireless Hotspots nationwide</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"4353598\"> \n  <div class=\"popupheadcont\">\n    PROVIDERVZ \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection.</li> \n   <li>Lightening fast symetrical upload/download internet speeds.</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"15498701\"> \n  <div class=\"popupheadcont\">\n    PROVIDERVZ \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection.</li> \n   <li>Lightening fast symetrical upload/download internet speeds.</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"32937483\"> \n  <div class=\"popupheadcont\">\n    FRONTIER \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection.</li> \n   <li>Fast and reliable WIFI.</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"114\"> \n  <div class=\"popupheadcont\">\n    ProviderSP \n  </div> \n  <ul> \n   <li>High speed broadband internet connection with No Data Caps</li>"
+                }
+            ],
+            [
+                {
+                    "tag": "B",
+                    "id": "",
+                    "className": "logoname",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<b class=\"logoname\" style=\"display: inline-block; margin-top: 5px;\"> ProviderXX </b>"
+                },
+                {
+                    "tag": "DIV",
+                    "id": "",
+                    "className": "popupheadcont",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div class=\"popupheadcont\"> \n      <b class=\"logoname\" style=\"display: inline-block; margin-top: 5px;\"> ProviderXX </b> \n     </div>"
+                },
+                {
+                    "tag": "DIV",
+                    "id": "",
+                    "className": "optioncont",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div class=\"optioncont\"> \n     <div class=\"popupheadcont\"> \n      <b class=\"logoname\" style=\"display: inline-block; margin-top: 5px;\"> ProviderXX </b> \n     </div> \n     <div class=\"optiondetls thinscroll\"> \n      <p style=\"margin: 0px 0px 6px 0px;\"> <u> Quién puede procesar un pedido </u> = <span style=\"font-weight: bold;\">NUEVO: </span>titular de la cuenta, tercero Después de la verificación de crédito <span style=\"font-weight: bold;\">TRANSFERENCIA:</span> Titular de la cuenta </p> \n      <p style=\"margin: 0px 0px 6px 0px;\"> <u> Verificación de crédito </u> = Titular de la cuenta. </p> \n      <p style=\"margin: 0px 0px 6px 0px;\"> <u> Pagar tarifas únicas </u> = Titular de la cuenta. Los terceros pueden pagar tarifas con autorización verbal. </p> \n      <p style=\"margin: 0px 0px 6px 0px;\"> <u> Primera factura </u> = Factura impresa recibida 15 días después de la instalación. </p> \n      <p style=\"margin: 0px 0px 6px 0px;\"> <u> Contrato </u> = 1 año: ETF de 110 USD prorrateado. 2 años: ETF prorrateado de $ 230. Período de gracia de 30 días. Mes 2 Mes. </p> \n      <p style=\"margin: 0px 0px 6px 0px;\"> <u> SUSPENSION </u> = Suspender hasta 9 meses al año. $ 9.95 / mes </p> \n      <p style=\"margin: 0px 0px 6px 0px;\"> <u> Depósito </u> =<span style=\"font-weight: bold;\"> cust recibirá el depósito de vuelta. El período de tiempo varía.</span> </p> \n     </div> \n    </div>"
+                },
+                {
+                    "tag": "DIV",
+                    "id": "",
+                    "className": "popupheadcont1",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div class=\"popupheadcont1\"> \n    <div class=\"optioncont\"> \n     <div class=\"popupheadcont\"> \n      <b class=\"logoname\" style=\"display: inline-block; margin-top: 5px;\"> ProviderXX </b> \n     </div> \n     <div class=\"optiondetls thinscroll\"> \n      <p style=\"margin: 0px 0px 6px 0px;\"> <u> Quién puede procesar un pedido </u> = <span style=\"font-weight: bold;\">NUEVO: </span>titular de la cuenta, tercero Después de la verificación de crédito <span style=\"font-weight: bold;\">TRANSFERENCIA:</span> Titular de la cuenta </p> \n      <p style=\"margin: 0px 0px 6px 0px;\"> <u> Verificación de crédito </u> = Titular de la cuenta. </p> \n      <p style=\"margin: 0px 0px 6px 0px;\"> <u> Pagar tarifas únicas </u> = Titular de la cuenta. Los terceros pueden pagar tarifas con autorización verbal. </p> \n      <p style=\"margin: 0px 0px 6px 0px;\"> <u> Primera factura </u> = Factura impresa recibida 15 días después de la instalación. </p> \n      <p style=\"margin: 0px 0px 6px 0px;\"> <u> Contrato </u> = 1 año: ETF de 110 USD prorrateado. 2 años: ETF prorrateado de $ 230. Período de gracia de 30 días. Mes 2 Mes. </p> \n      <p style=\"margin: 0px 0px 6px 0px;\"> <u> SUSPENSION </u> = Suspender hasta 9 meses al año. $ 9.95 / mes </p> \n      <p style=\"margin: 0px 0px 6px 0px;\"> <u> Depósito </u> =<span style=\"font-weight: bold;\"> cust recibirá el depósito de vuelta. El período de tiempo varía.</span> </p> \n     </div> \n    </div> \n   </div>"
+                },
+                {
+                    "tag": "DIV",
+                    "id": "spanishProviderComparison15501641",
+                    "className": "",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div id=\"spanishProviderComparison15501641\" style=\"display: none\"> \n   <div class=\"popupheadcont1\"> \n    <div class=\"optioncont\"> \n     <div class=\"popupheadcont\"> \n      <b class=\"logoname\" style=\"display: inline-block; margin-top: 5px;\"> ProviderXX </b> \n     </div> \n     <div class=\"optiondetls thinscroll\"> \n      <p style=\"margin: 0px 0px 6px 0px;\"> <u> Quién puede procesar un pedido </u> = <span style=\"font-weight: bold;\">NUEVO: </span>titular de la cuenta, tercero Después de la verificación de crédito <span style=\"font-weight: bold;\">TRANSFERENCIA:</span> Titular de la cuenta </p> \n      <p style=\"margin: 0px 0px 6px 0px;\"> <u> Verificación de crédito </u> = Titular de la cuenta. </p> \n      <p style=\"margin: 0px 0px 6px 0px;\"> <u> Pagar tarifas únicas </u> = Titular de la cuenta. Los terceros pueden pagar tarifas con autorización verbal. </p> \n      <p style=\"margin: 0px 0px 6px 0px;\"> <u> Primera factura </u> = Factura impresa recibida 15 días después de la instalación. </p> \n      <p style=\"margin: 0px 0px 6px 0px;\"> <u> Contrato </u> = 1 año: ETF de 110 USD prorrateado. 2 años: ETF prorrateado de $ 230. Período de gracia de 30 días. Mes 2 Mes. </p> \n      <p style=\"margin: 0px 0px 6px 0px;\"> <u> SUSPENSION </u> = Suspender hasta 9 meses al año. $ 9.95 / mes </p> \n      <p style=\"margin: 0px 0px 6px 0px;\"> <u> Depósito </u> =<span style=\"font-weight: bold;\"> cust recibirá el depósito de vuelta. El período de tiempo varía.</span> </p> \n     </div> \n    </div> \n   </di"
+                },
+                {
+                    "tag": "DIV",
+                    "id": "spanishProviderComparison15502381",
+                    "className": "",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div id=\"spanishProviderComparison15502381\"> \n  <div class=\"popupheadcont1\"> \n   <div class=\"optioncont\"> \n    <div class=\"popupheadcont\"> \n     <b class=\"logoname\" style=\"display: inline-block; margin-top: 0px;\"> ProviderFR </b> \n    </div> \n    <div class=\"optiondetls thinscroll\"> \n     <p style=\"margin: 0px 0px 6px 0px;\"> <u>Quien puede procesar un pedido</u>=<span style=\"font-weight: bold;\">NUEVO :</span> Titular de la cuenta.<span style=\"font-weight: bold;\">NO HAY TRANSFERENCIAS... Debe llamar directamente al proveedor.</span> </p> \n     <p style=\"margin: 0px 0px 6px 0px;\"><u>Comprobacion de credito</u>=Titular de la cuenta. </p> \n     <p style=\"margin: 0px 0px 6px 0px;\"><u>Pagar tarifas unicas</u>= Titular de la cuenta. </p> \n     <p style=\"margin: 0px 0px 6px 0px;\"><u>Primera factura </u>= Factura en papel recibida 15 dias despues de la instalacion. </p> \n     <p style=\"margin: 0px 0px 6px 0px;\"><u>Contrato</u> = Sin contrato, pero el cliente estara sujeto a ETF si se inscribe en edulcorantes </p> \n     <p style=\"margin: 0px 0px 6px 0px;\"> <u>SUSPENSION:</u>= Los precios varian segun el mercado y el plan. Consulte el servicio de atencion al cliente del proveedor </p> \n     <p style=\"margin: 0px 0px 6px 0px;\"> <u>Deposito</u>=<span style=\"font-weight: bold;\">Si el cliente cancela, recibira la devolucion de su dinero. Si no, lo recuperan después de 12 meses de tener una cuenta en buen estado.</span></p> \n    </div> \n   </div> \n  </div> \n  <div id=\"spanishProviderComparis"
+                },
+                {
+                    "tag": "DIV",
+                    "id": "SalesTipData",
+                    "className": "",
+                    "onclick": null,
+                    "role": null,
+                    "cursor": "auto",
+                    "html": "<div id=\"SalesTipData\"> \n <div id=\"24699452\"> \n  <div class=\"popupheadcont\">\n    ProviderAT \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection</li> \n   <li>Secured WIFI access to the ProviderAT Wireless Hotspots nationwide</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"4353598\"> \n  <div class=\"popupheadcont\">\n    PROVIDERVZ \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection.</li> \n   <li>Lightening fast symetrical upload/download internet speeds.</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"15498701\"> \n  <div class=\"popupheadcont\">\n    PROVIDERVZ \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection.</li> \n   <li>Lightening fast symetrical upload/download internet speeds.</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"32937483\"> \n  <div class=\"popupheadcont\">\n    FRONTIER \n  </div> \n  <ul> \n   <li>Dedicated Fiber-optic internet connection.</li> \n   <li>Fast and reliable WIFI.</li> \n   <li>No Upfront Cost for Qualified customers. Customer billed 30 Days after install.</li> \n  </ul> \n </div> \n <div id=\"114\"> \n  <div class=\"popupheadcont\">\n    ProviderSP \n  </div> \n  <ul> \n   <li>High speed broadband internet connection with No Data Caps</li> \n   <li>Access to thousands of WIFI Hot Spots.</li> "
+                }
+            ]
+        ]
+    }
+]

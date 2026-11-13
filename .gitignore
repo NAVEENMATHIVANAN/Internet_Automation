@@ -24,3 +24,5 @@ playwright/.cache/
 # Logs
 *.log
 orders.db
+
+backend/keys/private_key.pem

@@ -1,0 +1,20 @@
+[
+  {
+    "tag": "INPUT",
+    "type": "password",
+    "text": "",
+    "label": null,
+    "placeholder": null,
+    "name": null,
+    "id": "site-password"
+  },
+  {
+    "tag": "BUTTON",
+    "type": "submit",
+    "text": "Continue",
+    "label": null,
+    "placeholder": null,
+    "name": null,
+    "id": ""
+  }
+]

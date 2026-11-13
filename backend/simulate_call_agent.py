@@ -38,7 +38,9 @@ customer_order = {
         "account_holder_name": "John Smith",
         "speaking_to_account_holder": True,
         "existing_provider_customer": False,
-        "ez_enroll": False,
+        "ez_enroll": True,
+        "ez_enroll_disclosure_acknowledged": True,
+        "autopay_paperless_disclosure_acknowledged": True,
         "autopay_paperless_discount": True,
         "mailing_same_as_service": True,
         "shipping_same_as_service": True,
@@ -51,8 +53,10 @@ customer_order = {
     "installation_disclosure_acknowledged": True
     },
     "disclosures": {
-        "broadband_label_choice": "NOT_REQUESTED",
-        "broadband_label_acknowledged": True
+    "broadband_label_choice": "NOT_REQUESTED",
+    "broadband_label_acknowledged": True,
+    "payment_disclosure_acknowledged": True,
+    "credit_card_billing_same_as_service": True
     }
 }
 

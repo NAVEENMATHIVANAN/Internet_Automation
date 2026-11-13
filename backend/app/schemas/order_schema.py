@@ -1,11 +1,14 @@
 
 from typing import Literal
+from datetime import date
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from pydantic import field_validator, model_validator
 import re
 
+class StrictBaseModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
-class CustomerSchema(BaseModel):
+class CustomerSchema(StrictBaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     prefix: str | None = None
@@ -31,7 +34,7 @@ class CustomerSchema(BaseModel):
         return digits
 
 
-class ServiceAddressSchema(BaseModel):
+class ServiceAddressSchema(StrictBaseModel):
     zip_code: str
     address_line_1: str
     unit_type: str | None = None
@@ -68,7 +71,7 @@ class ServiceAddressSchema(BaseModel):
            raise ValueError("Move-in date must use DD/MM/YYYY format")
         return value
 
-class OrderSchema(BaseModel):
+class OrderSchema(StrictBaseModel):
     provider: str
     customer_type: Literal["NEW", "TRANSFER"]
     service_category: Literal["INTERNET"]
@@ -115,7 +118,7 @@ class OrderSchema(BaseModel):
 
         return self
 
-class AdditionalAddressSchema(BaseModel):
+class AdditionalAddressSchema(StrictBaseModel):
     address_line_1: str
     unit_type: str | None = None
     unit_number: str | None = None
@@ -123,7 +126,7 @@ class AdditionalAddressSchema(BaseModel):
     state: str
     zip_code: str
 
-class QualificationSchema(BaseModel):
+class QualificationSchema(StrictBaseModel):
     account_holder_name: str
     speaking_to_account_holder: bool
     existing_provider_customer: bool
@@ -134,25 +137,66 @@ class QualificationSchema(BaseModel):
     mailing_address: AdditionalAddressSchema | None = None
     shipping_address: AdditionalAddressSchema | None = None
     account_disclosure_acknowledged: bool = False
+    ez_enroll_disclosure_acknowledged: bool = False
+    autopay_paperless_disclosure_acknowledged: bool = False
 
 
-class InstallationSchema(BaseModel):
+class InstallationSchema(StrictBaseModel):
     installation_type: Literal[
         "STANDARD_SHIPPING", "PRO_INSTALL"
     ]
+
     preferred_date: str | None = None
-    preferred_time: str | None = None
+
+    preferred_time: Literal[
+        "Morning",
+        "Afternoon",
+        "Evening"
+    ] | None = None
+
     installation_disclosure_acknowledged: bool = False
 
+    @field_validator("preferred_date")
+    @classmethod
+    def validate_preferred_date(cls, value):
+        if value is None:
+            return value
 
-class DisclosureSchema(BaseModel):
+        try:
+            date.fromisoformat(value)
+        except ValueError:
+            raise ValueError(
+                "Installation date must use YYYY-MM-DD format"
+            )
+
+        return value
+
+    @model_validator(mode="after")
+    def validate_installation_details(self):
+        if self.installation_type == "PRO_INSTALL":
+            if not self.preferred_date:
+                raise ValueError(
+                    "Professional installation requires a preferred date"
+                )
+
+            if not self.preferred_time:
+                raise ValueError(
+                    "Professional installation requires a preferred time"
+                )
+
+        return self
+
+
+class DisclosureSchema(StrictBaseModel):
     broadband_label_choice: Literal[
         "REQUESTED", "NOT_REQUESTED"
     ]
     broadband_label_acknowledged: bool
+    payment_disclosure_acknowledged: bool = False
+    credit_card_billing_same_as_service: bool = False
 
 
-class OrderCreateSchema(BaseModel):
+class OrderCreateSchema(StrictBaseModel):
     customer: CustomerSchema
     service_address: ServiceAddressSchema
     order: OrderSchema
@@ -177,14 +221,14 @@ class OrderCreateSchema(BaseModel):
         return self
 
 
-class OrderResponseSchema(BaseModel):
+class OrderResponseSchema(StrictBaseModel):
     order_id: str
     status: str
     message: str
     automation_status: str
 
 
-class OrderStatusSchema(BaseModel):
+class OrderStatusSchema(StrictBaseModel):
     order_id: str
     status: str
     automation_status: str

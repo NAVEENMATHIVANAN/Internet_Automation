@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from app.routes.order_routes import router as order_router
 from app.routes.automation_routes import router as automation_router
 from app.services.database_service import create_database_tables
+from app.routes.secure_data_routes import router as secure_data_router
 
 app = FastAPI(
     title="Internet Order Automation API",
@@ -19,6 +20,7 @@ def startup_event():
 
 app.include_router(order_router)
 app.include_router(automation_router)
+app.include_router(secure_data_router)
 
 
 @app.get("/")

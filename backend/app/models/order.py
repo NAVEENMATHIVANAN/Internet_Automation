@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from sqlalchemy import Column, String, DateTime, JSON
 from app.database import Base
 
+from app.services.encrypted_json_service import EncryptedJSON
 
 class Order(Base):
     __tablename__ = "orders"
