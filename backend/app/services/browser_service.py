@@ -22,6 +22,7 @@ class BrowserService:
         self.page = None
         self.steps: list[str] = []
         self._run_succeeded = False
+        self._sensitive_data_active = False
 
     def _step(self, name: str):
         self.steps.append(name)
@@ -87,8 +88,11 @@ class BrowserService:
     
 
     def _screenshot(self, name: str):
-        if self.page:
-            self.page.screenshot(path=str(DATA_DIR / f'{name}.png'), full_page=True)
+      if self.page and not self._sensitive_data_active:
+        self.page.screenshot(
+            path=str(DATA_DIR / f"{name}.png"),
+            full_page=True
+        )
 
     def _wait_text(self, text: str, timeout: int = 60000):
         self.page.get_by_text(re.compile(re.escape(text), re.I)).first.wait_for(state='visible', timeout=timeout)
@@ -127,11 +131,52 @@ class BrowserService:
         c, a = data['customer'], data['service_address']
         self._step('Fill Basic Information')
 
-        if c.get('prefix'):
-            self._human_select(
-                self.page.locator('#namePrefixList'),
-                label=c['prefix']
+        
+        # Prefix is optional. Match the portal's actual options
+        # instead of assuming that its labels match our API values.
+        prefix = (c.get('prefix') or '').strip()
+
+        if prefix:
+            prefix_select = self.page.locator('#namePrefixList')
+            prefix_select.wait_for(state='visible', timeout=15000)
+
+            normalize = lambda value: re.sub(
+                r'[^a-z0-9]',
+                '',
+                (value or '').lower()
             )
+
+            requested_prefix = normalize(prefix)
+            matched_value = None
+
+            options = prefix_select.locator('option')
+
+            for index in range(options.count()):
+                option = options.nth(index)
+
+                option_text = option.inner_text().strip()
+                option_value = option.get_attribute('value') or ''
+
+                if (
+                    requested_prefix
+                    and requested_prefix in {
+                        normalize(option_text),
+                        normalize(option_value)
+                    }
+                ):
+                    matched_value = option_value
+                    break
+
+            if matched_value is not None:
+                prefix_select.select_option(value=matched_value)
+                self._step('Customer prefix selected')
+            else:
+                self._step(
+                    'Optional prefix not available in portal - skipped'
+                )
+        else:
+            self._step('Optional customer prefix skipped')
+
 
         self._human_type(
             self.page.locator('#firstName'),
@@ -604,10 +649,83 @@ class BrowserService:
                 f'{[radios.nth(i).get_attribute("value") for i in range(radios.count())]}'
             )
 
+    def _debug_autopay_radios(self, frame):
+        radios = frame.locator(
+            'input[type="radio"][name="autopay"]'
+        )
 
-    def _checkout_and_account(self, data: dict[str, Any]):
+        print("\n[AUTOPAY RADIO DIAGNOSTIC]")
+        print("Radio count:", radios.count())
+
+        for index in range(radios.count()):
+            details = radios.nth(index).evaluate("""
+                el => {
+                    const labels = Array.from(el.labels || [])
+                        .map(label => label.innerText.trim());
+
+                    let ancestors = [];
+                    let node = el;
+
+                    for (let i = 0; i < 4 && node; i++) {
+                        ancestors.push({
+                            tag: node.tagName,
+                            id: node.id,
+                            className: String(node.className || ""),
+                            text: (node.innerText || "").trim().slice(0, 250)
+                        });
+                        node = node.parentElement;
+                    }
+
+                    return {
+                        value: el.value,
+                        checked: el.checked,
+                        disabled: el.disabled,
+                        id: el.id,
+                        labels,
+                        ancestors
+                    };
+                }
+            """)
+
+            print(f"Radio {index + 1}:", details)
+
+
+    def _checkout_and_account(
+        self,
+        data: dict[str, Any],
+        identity_data: dict[str, str] | None = None
+    ):
         order, q, disclosures = data['order'], data['qualification'], data['disclosures']
         frame = self._checkout_frame()
+
+
+        # Diagnostic: inspect checkout radio controls.
+        # Do not collect customer or payment field values.
+        radio_details = frame.locator(
+            'input[type="radio"]'
+        ).evaluate_all("""
+            elements => elements.map((el, index) => ({
+                index: index,
+                name: el.name,
+                value: el.value,
+                checked: el.checked,
+                disabled: el.disabled,
+                visible: !!(
+                    el.offsetWidth ||
+                    el.offsetHeight ||
+                    el.getClientRects().length
+                ),
+                labels: Array.from(el.labels || [])
+                    .map(label => label.innerText.trim()),
+                parent_text: (
+                    el.parentElement?.innerText || ''
+                ).trim().slice(0, 200)
+            }))
+        """)
+
+        print('\\n[CHECKOUT RADIO DIAGNOSTIC]')
+        print(json.dumps(radio_details, indent=2))
+
         self._step('Configure checkout services')
         
         # -------------------------------------------------
@@ -724,83 +842,117 @@ class BrowserService:
             frame, 'ez', rf'^{ez_choice}$'
         )
 
+        
         # 4. Automatic Payments and Paperless Billing.
-        autopay_choice = (
+        expected_autopay = (
             'Yes' if q['autopay_paperless_discount'] else 'No'
         )
-        self._choose_radio_by_label(
-            frame, 'autopay', rf'^{autopay_choice}$'
+
+        autopay_radios = frame.locator(
+            'input[type="radio"][name="autopay"]'
         )
 
-        # 5. EZ-Enroll and Automatic Payments disclosures.
-        if q.get('ez_enroll', False):
-            if not q.get('ez_enroll_disclosure_acknowledged', False):
-                raise RuntimeError(
-                    'EZ-Enroll disclosure acknowledgement is not confirmed.'
-                )
+        selected_radio = None
 
-            if not q.get('autopay_paperless_disclosure_acknowledged', False):
-                raise RuntimeError(
-                    'Automatic Payments and Paperless Billing disclosure '
-                    'acknowledgement is not confirmed.'
-                )
+        # Identify the radio using its actual associated label.
+        for index in range(autopay_radios.count()):
+            radio = autopay_radios.nth(index)
 
-            # Locate the visible Read checkboxes in displayed order.
-            read_checkboxes = frame.locator(
-                'input[type="checkbox"]:visible'
+            label_text = radio.evaluate("""
+                el => Array.from(el.labels || [])
+                    .map(label => label.innerText.trim())
+                    .join(' ')
+            """)
+
+            if label_text.strip().casefold() == expected_autopay.casefold():
+                selected_radio = radio
+                break
+
+        if selected_radio is None:
+            raise RuntimeError(
+                f'Automatic Payments option {expected_autopay} '
+                'was not found.'
             )
 
-            checkbox_count = read_checkboxes.count()
-
-            print(f'[DEBUG] Visible disclosure checkboxes: {checkbox_count}')
-
-            if checkbox_count < 2:
+        # If already selected, verify it. Otherwise select it only
+        # when the portal allows the action.
+        if not selected_radio.is_checked():
+            if not selected_radio.is_enabled():
                 raise RuntimeError(
-                    'Expected two visible disclosure Read checkboxes, '
-                    f'but found {checkbox_count}.'
+                    f'Automatic Payments option {expected_autopay} '
+                    'is disabled and not selected.'
                 )
 
-            # First checkbox: EZ-Enroll disclosure.
-            ez_read = read_checkboxes.nth(0)
-            self._human_check(ez_read)
-            self._step('EZ-Enroll disclosure Read checkbox selected')
+            self._human_check(selected_radio)
 
-            # Second checkbox: Automatic Payments disclosure.
-            autopay_read = read_checkboxes.nth(1)
-            self._human_check(autopay_read)
-            self._step('Automatic Payments disclosure Read checkbox selected')
-
-            if not ez_read.is_checked():
-                raise RuntimeError('EZ-Enroll Read checkbox was not checked.')
-
-            if not autopay_read.is_checked():
-                raise RuntimeError(
-                    'Automatic Payments Read checkbox was not checked.'
-                )
-
-            self._step('Both EZ-Enroll disclosures verified')
-        else:
-            # Existing non-EZ-Enroll account disclosure flow.
-            if not q.get('account_disclosure_acknowledged', False):
-                raise RuntimeError(
-                    'Account-holder disclosure acknowledgement is not confirmed.'
-                )
-
-            read_checkbox = frame.locator(
-                'input[type="checkbox"]:visible'
+        if not selected_radio.is_checked():
+            raise RuntimeError(
+                'Automatic Payments selection could not be verified.'
             )
 
-            if read_checkbox.count() == 0:
+        self._step(
+            f'Automatic Payments selection verified: {expected_autopay}'
+        )
+
+        
+        # 5. Step 2 contains exactly two Read checkboxes,
+        # regardless of whether EZ-Enroll is Yes or No.
+        #
+        # Both disclosures must have been reviewed and acknowledged.
+        if not q.get('account_disclosure_acknowledged', False):
+            raise RuntimeError(
+                'First Step 2 disclosure has not been acknowledged.'
+            )
+
+        if not q.get(
+            'autopay_paperless_disclosure_acknowledged', False
+        ):
+            raise RuntimeError(
+                'Second Step 2 disclosure has not been acknowledged.'
+            )
+
+        read_checkboxes = frame.locator(
+            'input[type="checkbox"]:visible'
+        )
+
+        read_count = read_checkboxes.count()
+
+        if read_count != 2:
+            raise RuntimeError(
+                'Expected exactly two visible Step 2 Read checkboxes, '
+                f'but found {read_count}. '
+                'Stopped before clicking Forward.'
+            )
+
+        for index in range(2):
+            checkbox = read_checkboxes.nth(index)
+
+            if not checkbox.is_checked():
+                self._human_check(checkbox)
+
+            if not checkbox.is_checked():
                 raise RuntimeError(
-                    'Account-holder disclosure Read checkbox was not found.'
+                    f'Step 2 Read checkbox {index + 1} '
+                    'could not be verified.'
                 )
 
-            self._human_check(read_checkbox.first)
+            self._step(
+                f'Step 2 Read checkbox {index + 1} verified'
+            )
 
-            if not read_checkbox.first.is_checked():
-                raise RuntimeError(
-                    'Account-holder disclosure Read checkbox was not checked.'
-                )
+        if not all(
+            read_checkboxes.nth(i).is_checked()
+            for i in range(2)
+        ):
+            raise RuntimeError(
+                'Both Step 2 Read checkboxes were not verified.'
+            )
+
+        self._step(
+            'Both Step 2 disclosure acknowledgements completed'
+        )
+
+
 
         # 6. Mailing address.
         mailing_choice = (
@@ -835,9 +987,9 @@ class BrowserService:
 
         self._step('Continue to installation and payment')
 
+        
         # 1. Credit check - conditional based on EZ-Enroll.
         if q.get('ez_enroll', False):
-            # EZ-Enroll explicitly skips the credit check.
             self._step('EZ-Enroll selected - credit check not required')
             print(
                 '\n[EZ-ENROLL]'
@@ -845,46 +997,128 @@ class BrowserService:
                 '\nCustomer credit-card information will be collected '
                 'in the payment section.'
             )
+
         else:
-            # Standard enrollment requires manual credit check.
-            self._step('Manual Credit Check Required')
+            self._step('Automated Credit Check Required')
 
-            ssn = frame.get_by_label('Social Security Number')
-            dob = frame.get_by_label('Date of Birth')
-
-            if ssn.count() and dob.count():
-                print("\n======================================")
-                print("MANUAL CREDIT CHECK REQUIRED")
-                print("Enter customer SSN and DOB directly")
-                print("into the secure portal.")
-                print("Click Run Credit Check.")
-                print("Wait for APPROVED and SUCCESS.")
-                print("======================================\n")
-
-                input(
-                    "After completing the credit check in the portal, "
-                    "press ENTER to verify its result..."
+            if not identity_data:
+                raise RuntimeError(
+                    'Encrypted identity handoff is missing. '
+                    'Stopped before credit check.'
                 )
 
+            ssn_value = identity_data.get('ssn')
+            dob_value = identity_data.get('dob')
+
+            if not ssn_value or not dob_value:
+                raise RuntimeError(
+                    'Identity details are incomplete. '
+                    'Stopped before credit check.'
+                )
+
+            ssn_field = frame.get_by_label('Social Security Number')
+            dob_field = frame.get_by_label('Date of Birth')
+
+            if (
+                ssn_field.count() != 1
+                or dob_field.count() != 1
+                or not ssn_field.is_visible()
+                or not dob_field.is_visible()
+            ):
+                raise RuntimeError(
+                    'Credit-check identity fields were not found uniquely. '
+                    'Stopped for manual review.'
+                )
+
+            # Enter identity directly into the provider portal.
+            # Values are not printed, saved, or included in screenshots.
+            self._human_type(ssn_field, ssn_value)
+            self._human_type(dob_field, dob_value)
+
+            self._step('Credit-check identity fields populated')
+
+            # Locate the Run Credit Check control.
+            run_credit_check = frame.get_by_role(
+                'button',
+                name=re.compile(r'Run Credit Check', re.I)
+            )
+
+            if run_credit_check.count() == 0:
+                run_credit_check = frame.locator(
+                    'input[type="button"][value*="Run Credit Check"], '
+                    'input[type="submit"][value*="Run Credit Check"]'
+                )
+
+            if (
+                run_credit_check.count() != 1
+                or not run_credit_check.is_visible()
+                or not run_credit_check.is_enabled()
+            ):
+                raise RuntimeError(
+                    'Run Credit Check button was not found uniquely '
+                    'or is disabled. Stopped for manual review.'
+                )
+
+            self._human_click(run_credit_check)
+            self._step('Run Credit Check submitted')
+
+            # Wait for an explicit approved or unsuccessful result.
+            try:
                 frame.wait_for_function(
                     """() => {
                         const text = document.body.innerText;
 
-                        return (
+                        const approved =
                             /Credit Check Status:\\s*APPROVED/i.test(text) &&
                             /Processing Status:\\s*SUCCESS/i.test(text) &&
-                            /LineItem Status:\\s*SUCCESS/i.test(text)
-                        );
+                            /LineItem Status:\\s*SUCCESS/i.test(text);
+
+                        const unsuccessful =
+                            /Credit Check Status:\\s*(DECLINED|REJECTED|FAILED|ERROR)/i.test(text) ||
+                            /Processing Status:\\s*(FAILURE|FAILED|ERROR)/i.test(text) ||
+                            /LineItem Status:\\s*(FAILURE|FAILED|ERROR)/i.test(text);
+
+                        return approved || unsuccessful;
                     }""",
                     timeout=120000
                 )
 
-                self._step('Credit Check APPROVED - Processing SUCCESS')
-            else:
+            except PlaywrightTimeoutError:
                 raise RuntimeError(
-                    'Credit check section was not found for standard enrollment. '
-                    'Stopped for manual review.'
+                    'Credit-check result was not confirmed within '
+                    '120 seconds. Stopped for manual review.'
                 )
+
+            # Read only status indicators. Do not log the page contents.
+            credit_result = frame.evaluate(
+                """() => {
+                    const text = document.body.innerText;
+
+                    return {
+                        approved:
+                            /Credit Check Status:\\s*APPROVED/i.test(text) &&
+                            /Processing Status:\\s*SUCCESS/i.test(text) &&
+                            /LineItem Status:\\s*SUCCESS/i.test(text),
+
+                        unsuccessful:
+                            /Credit Check Status:\\s*(DECLINED|REJECTED|FAILED|ERROR)/i.test(text) ||
+                            /Processing Status:\\s*(FAILURE|FAILED|ERROR)/i.test(text) ||
+                            /LineItem Status:\\s*(FAILURE|FAILED|ERROR)/i.test(text)
+                    };
+                }"""
+            )
+
+            if not credit_result.get('approved'):
+                raise RuntimeError(
+                    'Credit check was not approved. '
+                    'Stopped for manual review; installation and '
+                    'payment workflow will not continue.'
+                )
+
+            self._step(
+                'Credit Check APPROVED - Processing SUCCESS - LineItem SUCCESS'
+            )
+
 
         # 2. Select installation.
         installation = data['installation']
@@ -1033,15 +1267,91 @@ class BrowserService:
         self._step('Installation selection confirmed')
 
         # Confirm Installation reveals the payment section.
-        self._step('Wait for payment section after installation confirmation')
+        
+        
+        # -------------------------------------------------
+        # CHECK WHETHER PRE-PAYMENT IS REQUIRED
+        # -------------------------------------------------
 
-        frame.get_by_text(
-            'PAYMENT INFORMATION',
-             exact=True
-        ).wait_for(state='visible', timeout=30000)
+        self._step('Inspect payment requirement after installation')
 
-        self._step('Payment Information section opened')
-        self._screenshot('full_flow_04_payment_page')
+        frame.wait_for_timeout(3000)
+
+        payment_page_text = frame.locator('body').inner_text()
+
+        no_prepayment_required = (
+            re.search(
+                r'Credit Check Status:\s*APPROVED.*?'
+                r'no pre-payment required',
+                payment_page_text,
+                re.I | re.S
+            ) is not None
+            and re.search(
+                r'Pre-Payment:\s*\$0\.00',
+                payment_page_text,
+                re.I
+            ) is not None
+        )
+
+        if no_prepayment_required:
+            self._step(
+                'Portal confirmed APPROVED - no pre-payment required'
+            )
+
+            # Do not enter card details when the portal explicitly
+            # confirms that no pre-payment is required.
+            forward = frame.locator(
+                'input[type="button"][value*="Forward"]:visible'
+            ).last
+
+            if not forward.count():
+                forward = frame.get_by_role(
+                    'button',
+                    name=re.compile(r'Forward', re.I)
+                ).last
+
+            forward.wait_for(state='visible', timeout=20000)
+
+            if not forward.is_enabled():
+                raise RuntimeError(
+                    'Forward button is disabled after credit approval.'
+                )
+
+            self._step(
+                'Continue from approved no-prepayment page'
+            )
+
+            self._human_click(forward)
+
+            # Verify that Order Summary actually loads.
+            self.page.wait_for_url(
+                re.compile(r'.*/order-summary/.*'),
+                timeout=60000
+            )
+
+            self._step('Order Summary page loaded')
+
+            # Sensitive identity data was used during this run.
+            # Do not capture screenshots of the page.
+            self.page.wait_for_timeout(120000)
+
+            return {
+                'status': 'ORDER_SUMMARY_REACHED',
+                'current_url': self.page.url,
+                'steps': self.steps,
+                'screenshot': None,
+                'message': (
+                    'Order Summary reached after approved credit check. '
+                    'No pre-payment was required. '
+                    'Final order submission and payment were not performed.'
+                )
+            }
+
+        self._step(
+            'Pre-payment required or approval state not confirmed; '
+            'continue to secure payment workflow'
+        )
+
 
         
         # -------------------------------------------------
@@ -1177,6 +1487,35 @@ class BrowserService:
 
         self._human_click(edit_secure)
 
+
+        # Diagnose secure card fields without reading or printing
+        # any card number, CVV, or entered field values.
+        self._step('Inspect secure card field selectors')
+
+        self.page.wait_for_timeout(1500)
+
+        secure_field_details = frame.locator(
+            'input:visible, select:visible'
+        ).evaluate_all("""
+            elements => elements.map((el, index) => ({
+                index: index,
+                tag: el.tagName,
+                type: el.getAttribute('type') || '',
+                id: el.id || '',
+                name: el.getAttribute('name') || '',
+                placeholder: el.getAttribute('placeholder') || '',
+                aria_label: el.getAttribute('aria-label') || '',
+                autocomplete: el.getAttribute('autocomplete') || '',
+                labels: Array.from(el.labels || [])
+                    .map(label => label.innerText.trim()),
+                class_name: String(el.className || '')
+            }))
+        """)
+
+        print('\\n[SECURE CARD FIELD SELECTORS]')
+        print(json.dumps(secure_field_details, indent=2))
+
+
         card_type_dropdown = frame.locator('select:visible').last
 
         card_type_dropdown.wait_for(
@@ -1197,33 +1536,103 @@ class BrowserService:
         self._step('Secure card fields activated')
 
         # 5. Manual secure card entry.
-        print(
-            '\n======================================'
-            '\nSECURE CARD ENTRY REQUIRED'
-            '\nEnter card type and card details directly'
-            '\nin the secure portal fields.'
-            '\nDo not send card details through the API.'
-            '\nDo not submit payment or place the order.'
-            '\n======================================\n'
-        )
+        
+        # 5. Populate simulator card details.
+        # Credentials are supplied at runtime and are never logged.
+        self._step('Populate secure simulator card fields')
 
-        input(
-            'After selecting the card type and entering the authorized '
-            'test card details directly in the secure portal, '
-            'press ENTER to continue...'
-        )
+        # Disable screenshots once sensitive card information is used.
+        self._sensitive_data_active = True
 
-        self._step('Secure card entry completed by operator')
+        card_type = os.getenv('SIM_CARD_TYPE', '').strip()
+        card_number = os.getenv('SIM_CARD_NUMBER', '').strip()
+        cardholder_name = os.getenv('SIM_CARDHOLDER_NAME', '').strip()
+        cvv = os.getenv('SIM_CVV', '').strip()
+        exp_month = os.getenv('SIM_EXP_MONTH', '').strip()
+        exp_year = os.getenv('SIM_EXP_YEAR', '').strip()
 
-        # Require operator confirmation before continuing.
-        # The portal disclosure states that card entry may place a hold.
-        input(
-            '\nConfirm that the customer has authorized the card hold '
-            'and the applicable payment terms. '
-            'Press ENTER only after confirmation...'
-        )
+        allowed_card_types = {
+            'Visa',
+            'MasterCard',
+            'American Express',
+            'Discover'
+        }
 
-        self._step('Operator confirmed payment authorization')
+        if card_type not in allowed_card_types:
+            raise RuntimeError('Invalid or missing simulator card type.')
+
+        card_number = re.sub(r'[\s-]', '', card_number)
+
+        if not card_number.isdigit() or not 12 <= len(card_number) <= 19:
+            raise RuntimeError('Simulator card number is missing or invalid.')
+
+        if not cardholder_name:
+            raise RuntimeError('Simulator cardholder name is missing.')
+
+        if not cvv.isdigit() or len(cvv) not in (3, 4):
+            raise RuntimeError('Simulator CVV is missing or invalid.')
+
+        if not exp_month.isdigit() or not 1 <= int(exp_month) <= 12:
+            raise RuntimeError('Simulator expiration month is invalid.')
+
+        if not re.fullmatch(r'\d{4}', exp_year):
+            raise RuntimeError('Simulator expiration year must have four digits.')
+
+        # Locate the exact fields identified by the DOM diagnostic.
+        card_type_field = frame.get_by_label('Card Type')
+        card_number_field = frame.get_by_label('Card Number')
+        cardholder_field = frame.get_by_label('Card Holder Name')
+        cvv_field = frame.get_by_label('CVV Code')
+        month_field = frame.get_by_label('Expiration month')
+        year_field = frame.get_by_label('Expiration year')
+
+        fields = [
+            card_type_field,
+            card_number_field,
+            cardholder_field,
+            cvv_field,
+            month_field,
+            year_field
+        ]
+
+        if any(field.count() != 1 or not field.is_visible()
+               for field in fields):
+            raise RuntimeError(
+                'One or more secure card fields were not found uniquely.'
+            )
+
+        # Select card type.
+        card_type_field.select_option(label=card_type)
+
+        # Fill the secure fields.
+        card_number_field.fill(card_number)
+        cardholder_field.fill(cardholder_name)
+        cvv_field.fill(cvv)
+        month_field.fill(exp_month.zfill(2))
+        year_field.fill(exp_year)
+
+        # Verify presence without reading or printing sensitive values.
+        if not all([
+            bool(card_type_field.input_value()),
+            bool(card_number_field.input_value()),
+            bool(cardholder_field.input_value()),
+            bool(cvv_field.input_value()),
+            bool(month_field.input_value()),
+            bool(year_field.input_value())
+        ]):
+            raise RuntimeError(
+                'Secure card field population could not be verified.'
+            )
+
+        self._step('Simulator card fields populated and verified')
+
+        # Clear local references as soon as field population is complete.
+        card_number = None
+        cvv = None
+        cardholder_name = None
+        exp_month = None
+        exp_year = None
+
 
         # Continue to Order Summary.
         forward = frame.locator(
@@ -1236,8 +1645,6 @@ class BrowserService:
             raise RuntimeError(
                 'Payment Forward button is disabled.'
             )
-
-        self._review_pause('Secure payment details and billing address')
 
         self._step('Continue from payment page to Order Summary')
         self._human_click(forward)
@@ -1264,18 +1671,26 @@ class BrowserService:
             )
         }
 
-    def run_full_order(self, data: dict[str, Any]):
+    def run_full_order(
+        self,
+        data: dict[str, Any],
+        identity_data: dict[str, str] | None = None
+    ):
         with sync_playwright() as p:
             self.playwright = p
             self.browser = p.chromium.launch(headless=False)
             self.context = self.browser.new_context(viewport={'width':1600,'height':900})
             self.page = self.context.new_page()
+            self._sensitive_data_active = identity_data is not None
             try:
                 self._login_and_start()
                 self._fill_basic_information(data)
                 self._select_customer_type(data['order'])
                 self._select_provider_and_plan(data['order'])
-                result = self._checkout_and_account(data)
+                result = self._checkout_and_account(
+                    data,
+                    identity_data=identity_data
+                )
                 self._run_succeeded = True
                 return result
             except Exception as exc:
@@ -1286,7 +1701,16 @@ class BrowserService:
                     self.page.wait_for_timeout(120000)
                 except Exception:
                     pass
-                return {'status':'MANUAL_REVIEW_REQUIRED','error':str(exc),'current_url':self.page.url if self.page else None,'steps':self.steps,'screenshot':str(DATA_DIR / 'full_flow_error.png')}
+                return {
+                    "status": "MANUAL_REVIEW_REQUIRED",
+                    "error": str(exc),
+                    "current_url": self.page.url if self.page else None,
+                    "steps": self.steps,
+                    "screenshot": (
+                        None if self._sensitive_data_active
+                        else str(DATA_DIR / "full_flow_error.png")
+                        )
+                }
             finally:
                 # On failure keep the visible browser open briefly so the portal state
                 # can be inspected. Successful runs close normally.
