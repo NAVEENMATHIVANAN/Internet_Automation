@@ -26,6 +26,8 @@ def create_order(
     db: Session = Depends(get_db)
 ):
     try:
+        encrypted_identity = request.encrypted_identity
+
         new_order = Order(
             customer_data=request.customer.model_dump(),
             service_address=request.service_address.model_dump(),
@@ -33,6 +35,16 @@ def create_order(
             qualification=request.qualification.model_dump(),
             installation=request.installation.model_dump(),
             disclosures=request.disclosures.model_dump(),
+
+            encrypted_ssn=(
+                request.encrypted_identity.encrypted_ssn
+                if request.encrypted_identity else None
+            ),
+            encrypted_dob=(
+                request.encrypted_identity.encrypted_dob
+                if request.encrypted_identity else None
+            ),
+
             status="RECEIVED",
             automation_status="PENDING"
         )

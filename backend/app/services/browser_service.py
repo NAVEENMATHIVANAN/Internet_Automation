@@ -312,6 +312,20 @@ class BrowserService:
             f"{selected_option['text']}"
         )
         self.page.locator('#rentOwnList').select_option(label={'OWN':'Own','RENT':'Rent'}[a['ownership']])
+                # Fill Lead ID
+        lead_id = data['order'].get('lead_id')
+
+        if not lead_id:
+            raise RuntimeError(
+                'Lead ID is missing from the order data.'
+            )
+
+        self._human_type(
+            self.page.locator('#rvCallID'),
+            lead_id
+        )
+
+        self._step('Lead ID entered')
         self.page.locator('#customerMove').select_option(label='Yes' if a['moving_status'] else 'No')
                 # Fill move-in date only when the customer is moving.
         if a.get('moving_status'):
@@ -392,6 +406,38 @@ class BrowserService:
 
         # Continue the existing portal flow
         self._forward_main()
+
+                # Wait for the ProviderXX recommendations card.
+        # The outer portal heading may say "Qualification",
+        # so do not use the heading as the page validation.
+
+        recommendations_frame = None
+        provider_card = None
+
+        for _ in range(60):
+            recommendations_frame = next(
+                (
+                    frame for frame in self.page.frames
+                    if '/allconnect/recommendations/' in frame.url
+                ),
+                None
+            )
+
+            if recommendations_frame is not None:
+                provider_card = recommendations_frame.locator('#goldTable')
+
+                if provider_card.count() and provider_card.is_visible():
+                    break
+
+            self.page.wait_for_timeout(500)
+
+        else:
+            raise RuntimeError(
+                'ProviderXX recommendation card did not appear '
+                'after customer type selection.'
+            )
+
+        self._step('ProviderXX recommendation card is visible')
 
         # Wait for the visible Recommendations page heading
         recommendations_heading = self.page.locator(
@@ -606,48 +652,58 @@ class BrowserService:
         raise RuntimeError('Embedded Allconnect checkout iframe did not load.')
 
     
-    def _choose_radio_by_label(self, frame, name: str, pattern: str, required=True):
+    
+    
+    def _choose_radio_by_label(self, frame, group_name, option_pattern):
+        """Select a radio button by group name and its associated label.
+
+        Supports regular-expression patterns used throughout the workflow.
+        """
+        pattern = re.compile(option_pattern, re.IGNORECASE)
+
         radios = frame.locator(
-            f'input[type="radio"][name="{name}"]'
+            f'input[type="radio"][name="{group_name}"]'
         )
 
-        for i in range(radios.count()):
-            radio = radios.nth(i)
+        count = radios.count()
 
-            value = radio.get_attribute("value") or ""
+        if count == 0:
+            raise RuntimeError(
+                f"No radio buttons found for group '{group_name}'."
+            )
 
-            # First match the actual radio value.
-            if re.search(pattern, value, re.I):
-                if radio.is_visible() and radio.is_enabled():
-                    self._human_check(radio)
-                    return
+        for index in range(count):
+            radio = radios.nth(index)
 
-            # Otherwise inspect the labels associated with this radio.
-            label_text = radio.evaluate("""
-                el => {
-                    const labels = Array.from(el.labels || []);
-                    if (labels.length) {
-                        return labels.map(label => label.innerText).join(' ');
-                    }
-
-                    return el.parentElement?.innerText || '';
-                }
+            labels = radio.evaluate("""
+                el => Array.from(el.labels || [])
+                    .map(label => label.innerText.trim())
             """)
 
-            # Remove exact-match anchors when checking surrounding label text.
-            flexible_pattern = pattern.replace('^', '').replace('$', '')
+            for label in labels:
+                normalized_label = re.sub(r'\s+', ' ', label).strip()
 
-            if re.search(flexible_pattern, label_text, re.I):
-                if radio.is_visible() and radio.is_enabled():
-                    self._human_check(radio)
+                if pattern.search(normalized_label):
+                    radio.check(force=True)
+
+                    if not radio.is_checked():
+                        raise RuntimeError(
+                            f"Radio selection failed for '{group_name}': "
+                            f"'{normalized_label}'"
+                        )
+
+                    print(
+                        f"[AUTOMATION] Selected '{normalized_label}' "
+                        f"from radio group '{group_name}'."
+                    )
                     return
 
-        if required:
-            raise RuntimeError(
-                f'Could not select {name} radio option matching {pattern!r}. '
-                f'Available values: '
-                f'{[radios.nth(i).get_attribute("value") for i in range(radios.count())]}'
-            )
+        raise RuntimeError(
+            f"Could not match pattern '{option_pattern}' "
+            f"in radio group '{group_name}'."
+        )
+
+
 
     def _debug_autopay_radios(self, frame):
         radios = frame.locator(
@@ -698,33 +754,6 @@ class BrowserService:
         order, q, disclosures = data['order'], data['qualification'], data['disclosures']
         frame = self._checkout_frame()
 
-
-        # Diagnostic: inspect checkout radio controls.
-        # Do not collect customer or payment field values.
-        radio_details = frame.locator(
-            'input[type="radio"]'
-        ).evaluate_all("""
-            elements => elements.map((el, index) => ({
-                index: index,
-                name: el.name,
-                value: el.value,
-                checked: el.checked,
-                disabled: el.disabled,
-                visible: !!(
-                    el.offsetWidth ||
-                    el.offsetHeight ||
-                    el.getClientRects().length
-                ),
-                labels: Array.from(el.labels || [])
-                    .map(label => label.innerText.trim()),
-                parent_text: (
-                    el.parentElement?.innerText || ''
-                ).trim().slice(0, 200)
-            }))
-        """)
-
-        print('\\n[CHECKOUT RADIO DIAGNOSTIC]')
-        print(json.dumps(radio_details, indent=2))
 
         self._step('Configure checkout services')
         
@@ -804,11 +833,14 @@ class BrowserService:
         self._human_click(forward)
         
         self._step('Fill account-holder and contact information')
+        self.page.wait_for_timeout(1500)
+
 
         # Account holder is pre-populated from Basic Information.
         holder = frame.get_by_role('combobox', name='Account holder')
         if holder.count():
             pass
+
 
         # 1. Verify agent is speaking to the account holder.
         verified = 'Yes' if q['speaking_to_account_holder'] else 'No'
@@ -896,35 +928,42 @@ class BrowserService:
 
         
         # 5. Step 2 contains exactly two Read checkboxes,
-        # regardless of whether EZ-Enroll is Yes or No.
-        #
-        # Both disclosures must have been reviewed and acknowledged.
-        if not q.get('account_disclosure_acknowledged', False):
+        
+        # 5. Step 2 Read checkboxes depend on EZ-Enroll selection.
+
+        ez_enroll_selected = bool(q.get('ez_enroll', False))
+
+        # The automatic payment disclosure is always required.
+        if not q.get('autopay_paperless_disclosure_acknowledged', False):
             raise RuntimeError(
-                'First Step 2 disclosure has not been acknowledged.'
+                'Automatic Payments and Paperless Billing disclosure '
+                'has not been acknowledged.'
             )
 
-        if not q.get(
-            'autopay_paperless_disclosure_acknowledged', False
+        # The additional EZ-Enroll disclosure is required only when Yes is selected.
+        if (
+            ez_enroll_selected
+            and not q.get('account_disclosure_acknowledged', False)
         ):
             raise RuntimeError(
-                'Second Step 2 disclosure has not been acknowledged.'
+                'EZ-Enroll disclosure has not been acknowledged.'
             )
 
         read_checkboxes = frame.locator(
             'input[type="checkbox"]:visible'
         )
 
-        read_count = read_checkboxes.count()
+        expected_read_count = 2 if ez_enroll_selected else 1
+        actual_read_count = read_checkboxes.count()
 
-        if read_count != 2:
+        if actual_read_count != expected_read_count:
             raise RuntimeError(
-                'Expected exactly two visible Step 2 Read checkboxes, '
-                f'but found {read_count}. '
-                'Stopped before clicking Forward.'
+                f'Expected {expected_read_count} Step 2 Read checkbox(es) '
+                f'for EZ-Enroll {"Yes" if ez_enroll_selected else "No"}, '
+                f'but found {actual_read_count}.'
             )
 
-        for index in range(2):
+        for index in range(expected_read_count):
             checkbox = read_checkboxes.nth(index)
 
             if not checkbox.is_checked():
@@ -940,17 +979,11 @@ class BrowserService:
                 f'Step 2 Read checkbox {index + 1} verified'
             )
 
-        if not all(
-            read_checkboxes.nth(i).is_checked()
-            for i in range(2)
-        ):
-            raise RuntimeError(
-                'Both Step 2 Read checkboxes were not verified.'
-            )
-
         self._step(
-            'Both Step 2 disclosure acknowledgements completed'
+            f'Step 2 disclosures completed - EZ-Enroll '
+            f'{"Yes" if ez_enroll_selected else "No"}'
         )
+
 
 
 
@@ -1016,19 +1049,52 @@ class BrowserService:
                     'Stopped before credit check.'
                 )
 
-            ssn_field = frame.get_by_label('Social Security Number')
-            dob_field = frame.get_by_label('Date of Birth')
+            # The portal's visible labels are not programmatically
+            # associated with their input elements. Locate each input
+            # using the text label immediately before it.
+            
+            # Identify the Credit Check panel using its visible heading.
+            credit_heading = frame.get_by_text(
+                'CREDIT CHECK',
+                exact=True
+            ).first
+
+            credit_heading.wait_for(
+                state='visible',
+                timeout=15000
+            )
+
+            # Locate the nearest panel containing the credit-check inputs.
+            credit_panel = credit_heading.locator(
+                "xpath=ancestor::*[.//input"
+                "[not(@type='button') and not(@type='submit')]][1]"
+            )
+
+            # DOB has a visible, distinctive placeholder in the portal.
+            dob_field = credit_panel.locator(
+                'input[placeholder="MM/DD/YYYY"]'
+            )
+
+            # The SSN field is the other editable input in this panel.
+            ssn_field = credit_panel.locator(
+                'input:not([type="button"]):not([type="submit"]):not([type="hidden"]):not([placeholder="MM/DD/YYYY"])'
+            )
 
             if (
-                ssn_field.count() != 1
-                or dob_field.count() != 1
-                or not ssn_field.is_visible()
+                dob_field.count() != 1
+                or ssn_field.count() != 1
                 or not dob_field.is_visible()
+                or not ssn_field.is_visible()
+                or not dob_field.is_enabled()
+                or not ssn_field.is_enabled()
             ):
                 raise RuntimeError(
-                    'Credit-check identity fields were not found uniquely. '
-                    'Stopped for manual review.'
+                    'Credit Check SSN/DOB fields could not be identified '
+                    'inside the Credit Check panel.'
                 )
+
+            self._step('Credit-check identity fields identified')
+
 
             # Enter identity directly into the provider portal.
             # Values are not printed, saved, or included in screenshots.
@@ -1298,8 +1364,10 @@ class BrowserService:
                 'Portal confirmed APPROVED - no pre-payment required'
             )
 
-            # Do not enter card details when the portal explicitly
-            # confirms that no pre-payment is required.
+            # Credit approved with no pre-payment.
+            # The portal proceeds to Step 4 Authorization.
+            self._step('Open Step 4 Authorization')
+
             forward = frame.locator(
                 'input[type="button"][value*="Forward"]:visible'
             ).last
@@ -1317,23 +1385,75 @@ class BrowserService:
                     'Forward button is disabled after credit approval.'
                 )
 
-            self._step(
-                'Continue from approved no-prepayment page'
-            )
-
             self._human_click(forward)
 
-            # Verify that Order Summary actually loads.
-            self.page.wait_for_url(
-                re.compile(r'.*/order-summary/.*'),
-                timeout=60000
+            # Wait for the actual Authorization page.
+            frame.get_by_text(
+                'ORDER REVIEW',
+                exact=True
+            ).wait_for(state='visible', timeout=30000)
+
+            self._step('Step 4 Authorization page loaded')
+
+            # The authorization page must contain exactly one visible Read checkbox.
+            authorization_checkboxes = frame.locator(
+                'input[type="checkbox"]:visible'
             )
 
-            self._step('Order Summary page loaded')
+            if authorization_checkboxes.count() != 1:
+                raise RuntimeError(
+                    'Expected exactly one Step 4 authorization Read checkbox, '
+                    f'found {authorization_checkboxes.count()}.'
+                )
 
-            # Sensitive identity data was used during this run.
-            # Do not capture screenshots of the page.
-            self.page.wait_for_timeout(120000)
+            authorization_read = authorization_checkboxes.first
+
+            if not authorization_read.is_checked():
+                self._human_check(authorization_read)
+
+            if not authorization_read.is_checked():
+                raise RuntimeError(
+                    'Step 4 authorization Read checkbox was not verified.'
+                )
+
+            self._step('Step 4 authorization Read checkbox verified')
+
+            # Submit the simulator order after the mandatory authorization.
+            submit_order = frame.get_by_role(
+                'button',
+                name=re.compile(r'^Submit Order$', re.I)
+            )
+
+            if submit_order.count() == 0:
+                submit_order = frame.locator(
+                    'input[type="button"][value="Submit Order"], '
+                    'input[type="submit"][value="Submit Order"]'
+                )
+
+            if (
+                submit_order.count() != 1
+                or not submit_order.is_visible()
+                or not submit_order.is_enabled()
+            ):
+                raise RuntimeError(
+                    'Submit Order button was not found uniquely or is disabled.'
+                )
+
+            self._step('Submit authorized simulator order')
+            self._human_click(submit_order)
+
+            # Wait for the final Order Summary.
+            try:
+                frame.get_by_text(
+                    re.compile(r'ORDER SUMMARY', re.I)
+                ).wait_for(state='visible', timeout=60000)
+            except PlaywrightTimeoutError:
+                self.page.wait_for_url(
+                    re.compile(r'.*/order-summary/.*'),
+                    timeout=60000
+                )
+
+            self._step('Final Order Summary page loaded')
 
             return {
                 'status': 'ORDER_SUMMARY_REACHED',
@@ -1341,9 +1461,8 @@ class BrowserService:
                 'steps': self.steps,
                 'screenshot': None,
                 'message': (
-                    'Order Summary reached after approved credit check. '
-                    'No pre-payment was required. '
-                    'Final order submission and payment were not performed.'
+                    'Simulator order submitted after authorization. '
+                    'Final Order Summary reached.'
                 )
             }
 

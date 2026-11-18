@@ -72,6 +72,8 @@ class ServiceAddressSchema(StrictBaseModel):
         return value
 
 class OrderSchema(StrictBaseModel):
+    lead_id: str = Field(min_length=1, max_length=100)
+
     provider: str
     customer_type: Literal["NEW", "TRANSFER"]
     service_category: Literal["INTERNET"]
@@ -195,8 +197,12 @@ class DisclosureSchema(StrictBaseModel):
     payment_disclosure_acknowledged: bool = False
     credit_card_billing_same_as_service: bool = False
 
+class EncryptedIdentitySchema(StrictBaseModel):
+    encrypted_ssn: str = Field(min_length=1, max_length=2000)
+    encrypted_dob: str = Field(min_length=1, max_length=2000)
+class OrderCreateSchema(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
-class OrderCreateSchema(StrictBaseModel):
     customer: CustomerSchema
     service_address: ServiceAddressSchema
     order: OrderSchema
@@ -204,8 +210,10 @@ class OrderCreateSchema(StrictBaseModel):
     installation: InstallationSchema
     disclosures: DisclosureSchema
 
+    encrypted_identity: EncryptedIdentitySchema | None = None
+
     @model_validator(mode="after")
-    def validate_additional_addresses(self):
+    def validate_order_data(self):
         if (
             not self.qualification.mailing_same_as_service
             and not self.qualification.mailing_address
@@ -218,6 +226,30 @@ class OrderCreateSchema(StrictBaseModel):
         ):
             raise ValueError("Shipping address is required")
 
+        if (
+            not self.qualification.ez_enroll
+            and self.encrypted_identity is None
+        ):
+            raise ValueError(
+                "Encrypted SSN and DOB are required when EZ-Enroll is disabled."
+            )
+
+        if (
+            self.qualification.ez_enroll
+            and self.encrypted_identity is not None
+        ):
+            raise ValueError(
+                "Identity details must not be supplied when EZ-Enroll is enabled."
+            )
+        if not self.qualification.ez_enroll and not self.encrypted_identity:
+            raise ValueError(
+                "Encrypted SSN and DOB are required when EZ-Enroll is disabled."
+       )
+
+        if self.qualification.ez_enroll and self.encrypted_identity:
+            raise ValueError(
+                "Identity details must not be supplied when EZ-Enroll is enabled."
+        )
         return self
 
 

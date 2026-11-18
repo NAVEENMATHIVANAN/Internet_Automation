@@ -29,7 +29,8 @@ class Order(Base):
     qualification = Column(JSON, nullable=False)
     installation = Column(JSON, nullable=False)
     disclosures = Column(JSON, nullable=False)
-
+    encrypted_ssn = Column(String(2000), nullable=True)
+    encrypted_dob = Column(String(2000), nullable=True)
     status = Column(
         String,
         nullable=False,
