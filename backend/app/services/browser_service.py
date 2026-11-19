@@ -745,11 +745,81 @@ class BrowserService:
 
             print(f"Radio {index + 1}:", details)
 
+    
+    
+    
+    def _select_installation_radio(
+        self,
+        frame,
+        option_value: str,
+        option_label: str
+    ):
+        """
+        Select installation option using the actual portal HTML.
+        Radio inputs have no value or id attributes.
+        """
+
+        installation_box = frame.locator(
+            'div.box.itype'
+        ).first
+
+        installation_box.wait_for(
+            state='visible',
+            timeout=15000
+        )
+
+        option_labels = installation_box.locator(
+            'label.g-opt'
+        )
+
+        target_label = None
+
+        for index in range(option_labels.count()):
+            label = option_labels.nth(index)
+            label_text = label.inner_text().strip().upper()
+
+            if option_value.upper() in label_text:
+                target_label = label
+                break
+
+        if target_label is None:
+            raise RuntimeError(
+                f'Installation option {option_value} not found.'
+            )
+
+        radio = target_label.locator(
+            'input[type="radio"]'
+        )
+
+        if radio.count() != 1:
+            raise RuntimeError(
+                f'Expected one radio input for {option_value}.'
+            )
+
+        # Select through the actual label.
+        if not radio.is_checked():
+            target_label.click(timeout=10000)
+
+        # Wait for the portal to update its checked state.
+        radio.wait_for(state='attached')
+
+        if not radio.is_checked():
+            raise RuntimeError(
+                f'{option_label} was not selected by the portal.'
+            )
+
+        self._step(
+            f'{option_label} selected and verified'
+        )
+
+
 
     def _checkout_and_account(
         self,
         data: dict[str, Any],
-        identity_data: dict[str, str] | None = None
+        identity_data: dict[str, str] | None = None,
+        payment_data: dict[str, str] | None = None,
+        cvv: str | None = None
     ):
         order, q, disclosures = data['order'], data['qualification'], data['disclosures']
         frame = self._checkout_frame()
@@ -927,63 +997,68 @@ class BrowserService:
         )
 
         
-        # 5. Step 2 contains exactly two Read checkboxes,
-        
-        # 5. Step 2 Read checkboxes depend on EZ-Enroll selection.
+                # 5. Step 2 – EZ-Enroll disclosures.
+        # The current portal displays TWO Read checkboxes when EZ-Enroll = Yes.
+        # Do not expect three checkboxes based on the number of API acknowledgements.
 
         ez_enroll_selected = bool(q.get('ez_enroll', False))
 
-        # The automatic payment disclosure is always required.
         if not q.get('autopay_paperless_disclosure_acknowledged', False):
             raise RuntimeError(
                 'Automatic Payments and Paperless Billing disclosure '
                 'has not been acknowledged.'
             )
 
-        # The additional EZ-Enroll disclosure is required only when Yes is selected.
-        if (
-            ez_enroll_selected
-            and not q.get('account_disclosure_acknowledged', False)
-        ):
-            raise RuntimeError(
-                'EZ-Enroll disclosure has not been acknowledged.'
-            )
+        if ez_enroll_selected:
+            required_acknowledgements = {
+                'account_disclosure_acknowledged': 'Account disclosure',
+                'ez_enroll_disclosure_acknowledged': 'EZ-Enroll disclosure',
+                'autopay_paperless_disclosure_acknowledged':
+                    'Automatic Payments and Paperless Billing disclosure'
+            }
 
-        read_checkboxes = frame.locator(
+            for field_name, label in required_acknowledgements.items():
+                if not q.get(field_name, False):
+                    raise RuntimeError(
+                        f'{label} has not been acknowledged. '
+                        'Stopped before selecting Read checkboxes.'
+                    )
+
+            expected_read_count = 2
+        else:
+            expected_read_count = 1
+
+        step2_read_checkboxes = frame.locator(
             'input[type="checkbox"]:visible'
         )
 
-        expected_read_count = 2 if ez_enroll_selected else 1
-        actual_read_count = read_checkboxes.count()
+        actual_read_count = step2_read_checkboxes.count()
 
         if actual_read_count != expected_read_count:
             raise RuntimeError(
-                f'Expected {expected_read_count} Step 2 Read checkbox(es) '
-                f'for EZ-Enroll {"Yes" if ez_enroll_selected else "No"}, '
-                f'but found {actual_read_count}.'
+                f'Step 2: expected {expected_read_count} visible Read '
+                f'checkbox(es), but found {actual_read_count}.'
             )
 
         for index in range(expected_read_count):
-            checkbox = read_checkboxes.nth(index)
+            checkbox = step2_read_checkboxes.nth(index)
 
             if not checkbox.is_checked():
                 self._human_check(checkbox)
 
             if not checkbox.is_checked():
                 raise RuntimeError(
-                    f'Step 2 Read checkbox {index + 1} '
-                    'could not be verified.'
+                    f'Step 2 Read checkbox {index + 1} was not selected.'
                 )
 
             self._step(
-                f'Step 2 Read checkbox {index + 1} verified'
+                f'Step 2 Read checkbox {index + 1} selected and verified'
             )
 
         self._step(
-            f'Step 2 disclosures completed - EZ-Enroll '
+            f'Step 2 completed - EZ-Enroll '
             f'{"Yes" if ez_enroll_selected else "No"}'
         )
-
 
 
 
@@ -1191,7 +1266,11 @@ class BrowserService:
         installation_type = installation['installation_type']
         if installation_type == 'PRO_INSTALL':
             self._step('Select Professional Installation')
-            self._choose_radio_by_label(frame, 'itype', r'PRO_INSTALL')
+            self._select_installation_radio(
+                frame,
+                'PRO_INSTALL',
+                'PRO INSTALL'
+            )
 
             if not installation.get(
                 'installation_disclosure_acknowledged', False
@@ -1311,26 +1390,294 @@ class BrowserService:
                 )
 
             self._step('Second installation disclosure acknowledged')
+        
         elif installation_type == 'STANDARD_SHIPPING':
             self._step('Select Standard Shipping')
-            self._choose_radio_by_label(
-                frame, 'itype', r'STANDARD_SHIPPING'
-            )
-        else:
-            raise RuntimeError(
-                f'Unsupported installation type: {installation_type}'
+
+            self._select_installation_radio(
+                frame,
+                'STANDARD_SHIPPING',
+                'STANDARD SHIPPING'
             )
 
-        self._screenshot('full_flow_03_installation_configured')
-        confirm = frame.locator(
-            'input[type="button"][value*="Confirm Installation"]'
-        )
-        if not confirm.count() or not confirm.is_visible():
-            raise RuntimeError(
-                'Confirm Installation button was not found.'
+            self._step('Standard Shipping selected and verified')
+
+            if not installation.get(
+                'installation_disclosure_acknowledged', False
+            ):
+                raise RuntimeError(
+                    'Standard Shipping installation disclosure '
+                    'has not been acknowledged.'
+                )
+
+            self._step(
+                'Standard Shipping installation acknowledgement verified'
             )
-        self._human_click(confirm)
-        self._step('Installation selection confirmed')
+
+
+        
+        
+        # Confirm the selected installation type.
+        
+        # -------------------------------------------------
+        # INSTALLATION NAVIGATION - CASE 1 / CASE 2
+        # -------------------------------------------------
+
+        self._screenshot('full_flow_03_installation_configured')
+
+        ez_enroll = bool(q.get('ez_enroll', False))
+
+        self._step(
+            f'Installation navigation decision: EZ-Enroll={q.get("ez_enroll")}'
+        )
+
+        if not ez_enroll:
+
+            # CASE 1: EZ-Enroll NO
+            # The portal uses Forward to proceed to Step 4.
+
+            self._step('Case 1: Looking for installation Forward button')
+
+            forward = frame.locator(
+                'input[type="button"][value*="Forward"], '
+                'input[type="submit"][value*="Forward"], '
+                'button:has-text("Forward")'
+            ).last
+
+            forward.wait_for(
+                state='visible',
+                timeout=20000
+            )
+
+            if not forward.is_enabled():
+                raise RuntimeError(
+                    'Case 1 installation Forward button is disabled.'
+                )
+
+            self._step('Case 1: Installation Forward button found')
+
+            self._human_click(forward)
+
+            self._step('Case 1: Installation Forward clicked')
+
+            # Wait for Step 4 Authorization.
+            frame.get_by_text(
+                'ORDER REVIEW',
+                exact=True
+            ).wait_for(
+                state='visible',
+                timeout=30000
+            )
+
+            self._step(
+                'Case 1 Step 4 Authorization page loaded'
+            )
+
+            # Check the Step 4 Read checkbox.
+            authorization_checkboxes = frame.locator(
+                'input[type="checkbox"]:visible'
+            )
+
+            if authorization_checkboxes.count() != 1:
+                raise RuntimeError(
+                    'Expected exactly one Step 4 Read checkbox, '
+                    f'found {authorization_checkboxes.count()}.'
+                )
+
+            authorization_read = authorization_checkboxes.first
+
+            if not authorization_read.is_checked():
+                self._human_check(authorization_read)
+
+            if not authorization_read.is_checked():
+                raise RuntimeError(
+                    'Case 1 Step 4 Read checkbox was not checked.'
+                )
+
+            self._step(
+                'Case 1 Step 4 Read checkbox verified'
+            )
+
+            # Submit Case 1 order.
+            submit_order = frame.get_by_role(
+                'button',
+                name=re.compile(r'^Submit Order$', re.I)
+            )
+
+            if submit_order.count() == 0:
+                submit_order = frame.locator(
+                    'input[type="button"][value="Submit Order"], '
+                    'input[type="submit"][value="Submit Order"]'
+                )
+
+            if (
+                submit_order.count() != 1
+                or not submit_order.is_visible()
+                or not submit_order.is_enabled()
+            ):
+                raise RuntimeError(
+                    'Case 1 Submit Order button was not found '
+                    'uniquely or is disabled.'
+                )
+
+            self._step('Submitting Case 1 order')
+            self._human_click(submit_order)
+
+            # Wait for Order Summary.
+            try:
+                frame.get_by_text(
+                    re.compile(r'ORDER SUMMARY', re.I)
+                ).wait_for(
+                    state='visible',
+                    timeout=60000
+                )
+            except PlaywrightTimeoutError:
+                self.page.wait_for_url(
+                    re.compile(r'.*/order-summary/.*'),
+                    timeout=60000
+                )
+
+            self._step('Case 1 Final Order Summary loaded')
+
+            return {
+                'status': 'ORDER_SUMMARY_REACHED',
+                'current_url': self.page.url,
+                'steps': self.steps,
+                'screenshot': None,
+                'message': (
+                    'Case 1 simulator order submitted successfully. '
+                    'Credit check approved, Step 4 authorization '
+                    'completed, and Order Summary reached.'
+                )
+            }
+
+        else:
+
+            # CASE 2: EZ-Enroll YES
+            # Confirm Installation opens the payment workflow.
+
+            self._step(
+                'Case 2: Confirm selected installation type'
+            )
+
+            confirm = frame.locator(
+                'input.cbtn[value="Confirm Installation >"]'
+            )
+
+            confirm.wait_for(
+                state='visible',
+                timeout=15000
+            )
+
+            if not confirm.is_enabled():
+                raise RuntimeError(
+                    'Case 2 Confirm Installation button is disabled.'
+                )
+
+            self._step('Clicking Confirm Installation')
+            self._human_click(confirm)
+
+            self._step('Case 2 installation confirmed')
+
+
+        # Wait for the payment-hold disclosure.
+        payment_hold_box = frame.locator(
+            '.box.tinted'
+        ).filter(
+            has_text='To confirm the card has sufficient funds'
+        ).first
+
+        payment_hold_box.wait_for(
+            state='visible',
+            timeout=20000
+        )
+
+        self._step('Payment hold disclosure displayed')
+
+        payment_read = payment_hold_box.locator(
+            'label.m-read input[type="checkbox"]'
+        )
+
+        if payment_read.count() != 1:
+            raise RuntimeError(
+                'Expected exactly one payment-hold Read checkbox.'
+            )
+
+        if not payment_read.is_checked():
+            self._human_check(payment_read)
+
+        if not payment_read.is_checked():
+            raise RuntimeError(
+                'Payment-hold Read checkbox was not checked.'
+            )
+
+        self._step('Payment-hold Read checkbox acknowledged')
+
+        # Wait for Payment Information.
+        payment_section = frame.locator('.box.payinfo')
+
+        payment_section.wait_for(
+            state='visible',
+            timeout=20000
+        )
+
+        self._step('Payment Information section displayed')
+
+
+        
+        # Select Add a new credit card.
+        add_card_label = payment_section.locator(
+            'label.g-opt'
+        ).filter(
+            has_text='Add a new credit card'
+        ).first
+
+        add_card_radio = add_card_label.locator(
+            'input[type="radio"]'
+        )
+
+        if not add_card_radio.is_checked():
+            add_card_label.click()
+
+        if not add_card_radio.is_checked():
+            raise RuntimeError(
+                'Could not select Add a new credit card.'
+            )
+
+        self._step('Add a new credit card selected')
+
+        # Select the credit-card billing address option.
+        billing_same = disclosures.get(
+            'credit_card_billing_same_as_service',
+            True
+        )
+
+        billing_option = (
+            'Yes' if billing_same else 'No'
+        )
+
+        billing_label = payment_section.locator(
+            '.billing label'
+        ).filter(
+            has_text=billing_option
+        ).first
+
+        billing_radio = billing_label.locator(
+            'input[type="radio"]'
+        )
+
+        if not billing_radio.is_checked():
+            billing_label.click()
+
+        if not billing_radio.is_checked():
+            raise RuntimeError(
+                f'Could not select billing address: {billing_option}'
+            )
+
+        self._step(
+            f'Credit-card billing address selected: {billing_option}'
+        )
+
 
         # Confirm Installation reveals the payment section.
         
@@ -1388,37 +1735,42 @@ class BrowserService:
             self._human_click(forward)
 
             # Wait for the actual Authorization page.
+            
+            # Wait for Step 4 Authorization / Order Review.
             frame.get_by_text(
                 'ORDER REVIEW',
                 exact=True
-            ).wait_for(state='visible', timeout=30000)
+            ).wait_for(
+                state='visible',
+                timeout=30000
+            )
 
             self._step('Step 4 Authorization page loaded')
 
-            # The authorization page must contain exactly one visible Read checkbox.
-            authorization_checkboxes = frame.locator(
+            # Locate the Step 4 Read checkbox.
+            authorization_read = frame.locator(
                 'input[type="checkbox"]:visible'
             )
 
-            if authorization_checkboxes.count() != 1:
+            if authorization_read.count() != 1:
                 raise RuntimeError(
-                    'Expected exactly one Step 4 authorization Read checkbox, '
-                    f'found {authorization_checkboxes.count()}.'
+                    'Expected exactly one visible Step 4 Read checkbox, '
+                    f'but found {authorization_read.count()}.'
                 )
 
-            authorization_read = authorization_checkboxes.first
+            authorization_read = authorization_read.first
 
             if not authorization_read.is_checked():
                 self._human_check(authorization_read)
 
             if not authorization_read.is_checked():
                 raise RuntimeError(
-                    'Step 4 authorization Read checkbox was not verified.'
+                    'Step 4 authorization Read checkbox was not selected.'
                 )
 
             self._step('Step 4 authorization Read checkbox verified')
 
-            # Submit the simulator order after the mandatory authorization.
+            # Find and submit the order.
             submit_order = frame.get_by_role(
                 'button',
                 name=re.compile(r'^Submit Order$', re.I)
@@ -1439,14 +1791,17 @@ class BrowserService:
                     'Submit Order button was not found uniquely or is disabled.'
                 )
 
-            self._step('Submit authorized simulator order')
+            self._step('Submitting authorized order')
             self._human_click(submit_order)
 
             # Wait for the final Order Summary.
             try:
                 frame.get_by_text(
                     re.compile(r'ORDER SUMMARY', re.I)
-                ).wait_for(state='visible', timeout=60000)
+                ).wait_for(
+                    state='visible',
+                    timeout=60000
+                )
             except PlaywrightTimeoutError:
                 self.page.wait_for_url(
                     re.compile(r'.*/order-summary/.*'),
@@ -1461,10 +1816,11 @@ class BrowserService:
                 'steps': self.steps,
                 'screenshot': None,
                 'message': (
-                    'Simulator order submitted after authorization. '
+                    'Case 2 simulator order submitted successfully. '
                     'Final Order Summary reached.'
                 )
             }
+
 
         self._step(
             'Pre-payment required or approval state not confirmed; '
@@ -1492,22 +1848,28 @@ class BrowserService:
                 'Payment disclosure acknowledgement is not confirmed.'
             )
 
-        payment_checkboxes = frame.locator(
+        payment_heading = frame.get_by_text(
+            'PAYMENT INFORMATION', exact=True
+        ).first
+        payment_heading.wait_for(state='visible', timeout=30000)
+
+        # Scope the checkbox lookup to the Payment Information panel.
+        # Step 2's three checkboxes must never be counted or reused here.
+        payment_section = payment_heading.locator(
+            'xpath=ancestor::*[.//input[@type="checkbox"]][1]'
+        )
+        payment_checkboxes = payment_section.locator(
             'input[type="checkbox"]:visible'
         )
-
         count = payment_checkboxes.count()
 
-        print(f'[PAYMENT] Visible Read checkboxes after confirmation: {count}')
-
-        if count < 1:
+        if count != 1:
             raise RuntimeError(
-                'Payment disclosure Read checkbox was not found.'
+                'Expected exactly one Step 3 Payment Information Read checkbox, '
+                f'but found {count} inside the Payment Information section.'
             )
 
-        # The last visible Read checkbox belongs to the newly opened
-        # card-payment disclosure.
-        payment_read = payment_checkboxes.last
+        payment_read = payment_checkboxes.first
 
         if not payment_read.is_checked():
             self._human_check(payment_read)
@@ -1519,32 +1881,38 @@ class BrowserService:
 
         self._step('Card-payment disclosure acknowledged')
 
-        # 2. Select Add a new credit card.
-        add_card_radios = frame.locator(
-            'input[type="radio"][name="addcard"]'
+        # 2. Click Add a New Credit Card. Some portal builds render this
+        # as a button; others render it as a radio option with that label.
+        add_card_button = frame.get_by_role(
+            'button', name=re.compile(r'Add a New Credit Card', re.I)
         )
-
-        add_card_selected = False
-
-        for i in range(add_card_radios.count()):
-            radio = add_card_radios.nth(i)
-
-            label = radio.evaluate("""
-                el => {
-                    const labels = Array.from(el.labels || []);
-                    return labels.map(x => x.innerText).join(' ');
-                }
-            """)
-
-            if 'Add a new credit card' in label:
-                self._human_check(radio)
-                add_card_selected = True
-                break
-
-        if not add_card_selected:
-            raise RuntimeError(
-                'Add a new credit card option was not found.'
+        if add_card_button.count() == 0:
+            add_card_button = frame.locator(
+                'input[type="button"][value*="Add a New Credit Card"], '
+                'input[type="submit"][value*="Add a New Credit Card"]'
             )
+
+        if add_card_button.count() == 1 and add_card_button.is_visible():
+            self._human_click(add_card_button)
+        else:
+            add_card_radios = frame.locator(
+                'input[type="radio"][name="addcard"]'
+            )
+            add_card_selected = False
+            for index in range(add_card_radios.count()):
+                radio = add_card_radios.nth(index)
+                label_text = radio.evaluate("""
+                    el => Array.from(el.labels || [])
+                        .map(label => label.innerText.trim()).join(' ')
+                """)
+                if re.search(r'Add a New Credit Card', label_text, re.I):
+                    self._human_check(radio)
+                    add_card_selected = radio.is_checked()
+                    break
+            if not add_card_selected:
+                raise RuntimeError(
+                    'Add a New Credit Card button/option was not found or selected.'
+                )
 
         self._step('Add a new credit card selected')
 
@@ -1663,12 +2031,19 @@ class BrowserService:
         # Disable screenshots once sensitive card information is used.
         self._sensitive_data_active = True
 
-        card_type = os.getenv('SIM_CARD_TYPE', '').strip()
-        card_number = os.getenv('SIM_CARD_NUMBER', '').strip()
-        cardholder_name = os.getenv('SIM_CARDHOLDER_NAME', '').strip()
-        cvv = os.getenv('SIM_CVV', '').strip()
-        exp_month = os.getenv('SIM_EXP_MONTH', '').strip()
-        exp_year = os.getenv('SIM_EXP_YEAR', '').strip()
+        if not isinstance(payment_data, dict) or not cvv:
+            raise RuntimeError(
+                'Decrypted payment details and transient CVV were not supplied '
+                'to the browser automation.'
+            )
+
+        # These values are decrypted upstream and passed only in memory.
+        card_type = str(payment_data.get('card_type', '')).strip()
+        card_number = str(payment_data.get('card_number', '')).strip()
+        cardholder_name = str(payment_data.get('cardholder_name', '')).strip()
+        exp_month = str(payment_data.get('expiry_month', '')).strip()
+        exp_year = str(payment_data.get('expiry_year', '')).strip()
+        cvv = str(cvv).strip()
 
         allowed_card_types = {
             'Visa',
@@ -1723,12 +2098,17 @@ class BrowserService:
         # Select card type.
         card_type_field.select_option(label=card_type)
 
-        # Fill the secure fields.
+        # Fill each secure field and move focus away to trigger portal validation.
         card_number_field.fill(card_number)
+        card_number_field.press('Tab')
         cardholder_field.fill(cardholder_name)
+        cardholder_field.press('Tab')
         cvv_field.fill(cvv)
+        cvv_field.press('Tab')
         month_field.fill(exp_month.zfill(2))
+        month_field.press('Tab')
         year_field.fill(exp_year)
+        year_field.press('Tab')
 
         # Verify presence without reading or printing sensitive values.
         if not all([
@@ -1753,54 +2133,140 @@ class BrowserService:
         exp_year = None
 
 
-        # Continue to Order Summary.
+       
+        # -------------------------------------------------
+        # 8. CONTINUE TO STEP 4 AUTHORIZATION
+        # -------------------------------------------------
+
         forward = frame.locator(
             'input[type="button"][value*="Forward"]:visible'
         ).last
 
-        forward.wait_for(state='visible', timeout=20000)
+        forward.wait_for(
+            state='visible',
+            timeout=20000
+        )
 
         if not forward.is_enabled():
             raise RuntimeError(
                 'Payment Forward button is disabled.'
             )
 
-        self._step('Continue from payment page to Order Summary')
+        self._step('Continue from payment page to Step 4 Authorization')
         self._human_click(forward)
 
-        self.page.wait_for_url(
-            re.compile(r'.*/order-summary/.*'),
-            timeout=60000
+        # Wait for Step 4 Order Review.
+        frame.get_by_text(
+            'ORDER REVIEW',
+            exact=True
+        ).wait_for(
+            state='visible',
+            timeout=30000
         )
 
-        self._step('Order Summary page loaded')
+        self._step('Step 4 Authorization page loaded')
+
+        # -------------------------------------------------
+        # 9. STEP 4 AUTHORIZATION READ CHECKBOX
+        # -------------------------------------------------
+
+        authorization_checkboxes = frame.locator(
+            'input[type="checkbox"]:visible'
+        )
+
+        authorization_count = authorization_checkboxes.count()
+
+        if authorization_count != 1:
+            raise RuntimeError(
+                'Expected exactly one visible Step 4 Read checkbox, '
+                f'but found {authorization_count}.'
+            )
+
+        authorization_read = authorization_checkboxes.first
+
+        if not authorization_read.is_checked():
+            self._human_check(authorization_read)
+
+        if not authorization_read.is_checked():
+            raise RuntimeError(
+                'Step 4 authorization Read checkbox was not selected.'
+            )
+
+        self._step('Step 4 authorization Read checkbox verified')
+
+        # -------------------------------------------------
+        # 10. SUBMIT ORDER
+        # -------------------------------------------------
+
+        submit_order = frame.get_by_role(
+            'button',
+            name=re.compile(r'^Submit Order$', re.I)
+        )
+
+        if submit_order.count() == 0:
+            submit_order = frame.locator(
+                'input[type="button"][value="Submit Order"], '
+                'input[type="submit"][value="Submit Order"]'
+            )
+
+        if (
+            submit_order.count() != 1
+            or not submit_order.is_visible()
+            or not submit_order.is_enabled()
+        ):
+            raise RuntimeError(
+                'Submit Order button was not found uniquely or is disabled.'
+            )
+
+        self._step('Submitting Case 2 simulator order')
+        self._human_click(submit_order)
+
+        # -------------------------------------------------
+        # 11. WAIT FOR FINAL ORDER SUMMARY
+        # -------------------------------------------------
+
+        try:
+            frame.get_by_text(
+                re.compile(r'ORDER SUMMARY', re.I)
+            ).wait_for(
+                state='visible',
+                timeout=60000
+            )
+        except PlaywrightTimeoutError:
+            self.page.wait_for_url(
+                re.compile(r'.*/order-summary/.*'),
+                timeout=60000
+            )
+
+        self._step('Final Order Summary page loaded')
 
         self._screenshot('full_flow_06_order_summary')
-
-        self.page.wait_for_timeout(120000)
 
         return {
             'status': 'ORDER_SUMMARY_REACHED',
             'current_url': self.page.url,
             'steps': self.steps,
-            'screenshot': str(DATA_DIR / 'full_flow_06_order_summary.png'),
+            'screenshot': None,
             'message': (
-                'Order Summary reached. Final order submission '
-                'and payment completion were not performed.'
+                'Case 2 simulator order submitted successfully. '
+                'Step 4 authorization completed and final Order Summary reached.'
             )
         }
+
 
     def run_full_order(
         self,
         data: dict[str, Any],
-        identity_data: dict[str, str] | None = None
+        identity_data: dict[str, str] | None = None,
+        payment_data: dict[str, str] | None = None,
+        cvv: str | None = None
     ):
         with sync_playwright() as p:
             self.playwright = p
             self.browser = p.chromium.launch(headless=False)
             self.context = self.browser.new_context(viewport={'width':1600,'height':900})
             self.page = self.context.new_page()
-            self._sensitive_data_active = identity_data is not None
+            self._sensitive_data_active = (identity_data is not None or payment_data is not None or cvv is not None)
             try:
                 self._login_and_start()
                 self._fill_basic_information(data)
@@ -1808,7 +2274,9 @@ class BrowserService:
                 self._select_provider_and_plan(data['order'])
                 result = self._checkout_and_account(
                     data,
-                    identity_data=identity_data
+                    identity_data=identity_data,
+                    payment_data=payment_data,
+                    cvv=cvv
                 )
                 self._run_succeeded = True
                 return result
@@ -1836,5 +2304,4 @@ class BrowserService:
                 if self.context and self.steps and getattr(self, '_run_succeeded', False):
                     self.context.close()
                     if self.browser:
-                        self.browser.close()
                         self.browser.close()

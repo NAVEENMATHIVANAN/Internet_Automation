@@ -31,6 +31,10 @@ class Order(Base):
     disclosures = Column(JSON, nullable=False)
     encrypted_ssn = Column(String(2000), nullable=True)
     encrypted_dob = Column(String(2000), nullable=True)
+    encrypted_payment_data = Column(
+        String(10000),
+        nullable=True
+    )
     status = Column(
         String,
         nullable=False,

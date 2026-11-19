@@ -200,6 +200,16 @@ class DisclosureSchema(StrictBaseModel):
 class EncryptedIdentitySchema(StrictBaseModel):
     encrypted_ssn: str = Field(min_length=1, max_length=2000)
     encrypted_dob: str = Field(min_length=1, max_length=2000)
+
+
+class EncryptedPaymentSchema(StrictBaseModel):
+    encrypted_card_type: str = Field(min_length=1, max_length=2000)
+    encrypted_card_number: str = Field(min_length=1, max_length=2000)
+    encrypted_cardholder_name: str = Field(min_length=1, max_length=2000)
+    encrypted_expiry_month: str = Field(min_length=1, max_length=2000)
+    encrypted_expiry_year: str = Field(min_length=1, max_length=2000)
+
+
 class OrderCreateSchema(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -211,6 +221,9 @@ class OrderCreateSchema(BaseModel):
     disclosures: DisclosureSchema
 
     encrypted_identity: EncryptedIdentitySchema | None = None
+    encrypted_payment: EncryptedPaymentSchema | None = None
+    # Encrypted CVV is transient input only; it must never be persisted.
+    encrypted_cvv: str | None = Field(default=None, min_length=1, max_length=2000)
 
     @model_validator(mode="after")
     def validate_order_data(self):
@@ -226,31 +239,40 @@ class OrderCreateSchema(BaseModel):
         ):
             raise ValueError("Shipping address is required")
 
-        if (
-            not self.qualification.ez_enroll
-            and self.encrypted_identity is None
-        ):
-            raise ValueError(
-                "Encrypted SSN and DOB are required when EZ-Enroll is disabled."
-            )
+        if self.qualification.ez_enroll:
+            if self.encrypted_identity is not None:
+                raise ValueError(
+                    "Identity details must not be supplied when EZ-Enroll is enabled."
+                )
 
-        if (
-            self.qualification.ez_enroll
-            and self.encrypted_identity is not None
-        ):
-            raise ValueError(
-                "Identity details must not be supplied when EZ-Enroll is enabled."
-            )
-        if not self.qualification.ez_enroll and not self.encrypted_identity:
-            raise ValueError(
-                "Encrypted SSN and DOB are required when EZ-Enroll is disabled."
-       )
+            if self.encrypted_payment is None:
+                raise ValueError(
+                    "Encrypted card details are required when EZ-Enroll is enabled."
+                )
 
-        if self.qualification.ez_enroll and self.encrypted_identity:
-            raise ValueError(
-                "Identity details must not be supplied when EZ-Enroll is enabled."
-        )
+            if not self.encrypted_cvv:
+                raise ValueError(
+                    "Encrypted CVV is required when EZ-Enroll is enabled."
+                )
+
+        else:
+            if self.encrypted_identity is None:
+                raise ValueError(
+                    "Encrypted SSN and DOB are required when EZ-Enroll is disabled."
+                )
+
+            if self.encrypted_payment is not None:
+                raise ValueError(
+                    "Card details must not be supplied when EZ-Enroll is disabled."
+                )
+
+            if self.encrypted_cvv is not None:
+                raise ValueError(
+                    "CVV must not be supplied when EZ-Enroll is disabled."
+                )
+
         return self
+
 
 
 class OrderResponseSchema(StrictBaseModel):
