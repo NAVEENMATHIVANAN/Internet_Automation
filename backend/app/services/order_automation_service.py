@@ -101,6 +101,7 @@ def decrypt_and_validate_payment(
         )
 
 
+
 def execute_order_automation(
     db,
     order,
@@ -117,14 +118,21 @@ def execute_order_automation(
         qualification = order.qualification or {}
         ez_enroll = qualification.get("ez_enroll", False)
 
+        # --------------------------------------------
+        # 1. Decrypt identity or payment information
+        # --------------------------------------------
+
         if not ez_enroll:
+
             if encrypted_cvv is not None:
                 raise ValueError(
                     "CVV is not accepted for the standard credit-check path."
                 )
 
             if not order.encrypted_ssn or not order.encrypted_dob:
-                raise ValueError("Encrypted identity details are missing.")
+                raise ValueError(
+                    "Encrypted identity details are missing."
+                )
 
             ssn = decrypt_with_private_key(order.encrypted_ssn)
             dob = decrypt_with_private_key(order.encrypted_dob)
@@ -137,17 +145,28 @@ def execute_order_automation(
             }
 
         else:
+
             if not order.encrypted_payment_data or not encrypted_cvv:
-                raise ValueError("Encrypted payment details are missing.")
+                raise ValueError(
+                    "Encrypted payment details are missing."
+                )
 
             payment_data, cvv = decrypt_and_validate_payment(
                 order.encrypted_payment_data,
                 encrypted_cvv,
             )
 
+        # --------------------------------------------
+        # 2. Mark automation as in progress
+        # --------------------------------------------
+
         order.status = "IN_PROGRESS"
         order.automation_status = "IN_PROGRESS"
         db.commit()
+
+        # --------------------------------------------
+        # 3. Build browser automation payload
+        # --------------------------------------------
 
         payload = {
             "customer": order.customer_data,
@@ -158,6 +177,10 @@ def execute_order_automation(
             "disclosures": order.disclosures,
         }
 
+        # --------------------------------------------
+        # 4. Execute browser automation exactly once
+        # --------------------------------------------
+
         result = BrowserService().run_full_order(
             payload,
             identity_data=identity_data,
@@ -166,45 +189,69 @@ def execute_order_automation(
         )
 
         if not isinstance(result, dict):
-            raise RuntimeError("Browser automation returned an invalid result.")
+            raise RuntimeError(
+                "Browser automation returned an invalid result."
+            )
 
         automation_result = result.get(
             "status",
             "MANUAL_REVIEW_REQUIRED",
         )
 
-        order.automation_status = automation_result
+        # --------------------------------------------
+        # 5. Update database based on actual result
+        # --------------------------------------------
 
-        if automation_result == "ORDER_SUBMITTED":
-            order.status = "READY_FOR_REVIEW"
+        if automation_result in ("ORDER_PLACED", "ORDER_SUBMITTED"):
+
+            # Both values are accepted for compatibility.
+            order.status = "ORDER_PLACED"
+            order.automation_status = "ORDER_PLACED"
+
+            # Remove encrypted payment and identity information
+            # after successful order placement.
             order.encrypted_ssn = None
             order.encrypted_dob = None
             order.encrypted_payment_data = None
 
-        elif automation_result == "ORDER_SUMMARY_REACHED":
-            # Summary reached is not proof of final order submission.
-            order.status = "READY_FOR_REVIEW"
-
         else:
+
+            # Order Summary alone is not successful placement.
             order.status = "MANUAL_REVIEW_REQUIRED"
+            order.automation_status = "MANUAL_REVIEW_REQUIRED"
 
         db.commit()
 
+        # --------------------------------------------
+        # 6. Return the complete browser result
+        # --------------------------------------------
+
         return result
 
-    except Exception:
+    except Exception as exc:
+
         db.rollback()
 
         order.status = "MANUAL_REVIEW_REQUIRED"
         order.automation_status = "MANUAL_REVIEW_REQUIRED"
+
         db.commit()
 
         return {
             "status": "MANUAL_REVIEW_REQUIRED",
-            "message": "Automation could not be completed. Manual review is required.",
+            "message": (
+                "Automation could not be completed. "
+                "Manual review is required."
+            ),
+            "error": str(exc),
+            "current_url": None,
+            "portal_order_id": None,
+            "steps": [],
+            "screenshot": None,
         }
 
     finally:
+
         if identity_data is not None:
             identity_data.clear()
 

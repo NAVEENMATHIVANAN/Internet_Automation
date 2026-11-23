@@ -79,14 +79,25 @@ def create_order(
             encrypted_cvv=request.encrypted_cvv,
         )
 
+        # BrowserService returns confirmation_message on success.
+        # Use it when a separate message field is not available.
+        response_message = (
+            result.get("message")
+            or result.get("confirmation_message")
+            or "Automation processing finished."
+        )
+
         return {
             "order_id": new_order.order_id,
             "status": new_order.status,
-            "message": result.get(
-                "message",
-                "Order received. Automation processing finished.",
-            ),
+            "message": response_message,
             "automation_status": new_order.automation_status,
+
+            "portal_order_id": result.get("portal_order_id"),
+            "current_url": result.get("current_url"),
+            "steps": result.get("steps", []),
+            "error": result.get("error"),
+            "screenshot": result.get("screenshot"),
         }
 
     # Case 1 remains unchanged: create first, then use the existing

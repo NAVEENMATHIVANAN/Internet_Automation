@@ -813,6 +813,357 @@ class BrowserService:
         )
 
 
+    
+    
+    
+    def _place_order_and_get_portal_id(self, frame):
+        """
+        Complete the final order submission for both Case 1 and Case 2.
+
+        1. Verify Order Summary.
+        2. Click Place Order exactly once.
+        3. Wait for final confirmation.
+        4. Extract the portal-generated Order ID.
+        """
+        self._step("ENTERED FINAL PLACE ORDER FUNCTION")
+
+        # --------------------------------------------------
+        # 1. Verify Order Summary after navigation
+        # --------------------------------------------------
+
+        self._step(
+            "Waiting for Order Summary navigation to complete"
+        )
+
+        # The previous checkout iframe may be detached after
+        # the portal navigates to the Order Summary page.
+        # Therefore, do not use the old frame reference here.
+
+        try:
+            self.page.wait_for_url(
+                    re.compile(r".*/order-summary(?:/|\?).*"),
+                    timeout=30000
+                )
+        except Exception:
+            # If already on the Order Summary URL, continue.
+            if "/order-summary/" not in self.page.url.lower():
+                    raise RuntimeError(
+                        "Portal did not navigate to the Order Summary page. "
+                        f"Current URL: {self.page.url}"
+                    )
+
+        self._step(
+            f"Order Summary navigation confirmed: {self.page.url}"
+        )
+
+        # --------------------------------------------------
+        # 2. Find Place Order on the parent page
+        # --------------------------------------------------
+
+        place_order = self.page.locator(
+            'form#checkoutForm input#placeOrder'
+        )
+
+        place_order.wait_for(
+            state="visible",
+            timeout=20000
+        )
+
+        if place_order.count() != 1:
+            raise RuntimeError(
+                f"Expected exactly one Place Order button, "
+                f"found {place_order.count()}."
+            )
+
+        if not place_order.is_visible():
+            raise RuntimeError(
+                "Place Order button is not visible."
+            )
+
+        if not place_order.is_enabled():
+            raise RuntimeError(
+                "Place Order button is disabled."
+            )
+
+        button_info = place_order.evaluate("""
+            element => ({
+                id: element.id,
+                value: element.value,
+                disabled: element.disabled,
+                formId: element.form?.id,
+                formAction: element.form?.action,
+                formMethod: element.form?.method,
+                eventId: element.form?.querySelector(
+                    'input[name="_eventId"]'
+                )?.value
+            })
+        """)
+
+        self._step(
+            f"Place Order diagnostics: {button_info}"
+        )
+
+        # --------------------------------------------------
+        # 3. Capture click and submit events
+        # --------------------------------------------------
+
+        self.page.evaluate("""
+            () => {
+                window.__placeOrderEvents = [];
+
+                const button = document.querySelector(
+                    'form#checkoutForm input#placeOrder'
+                );
+
+                const form = document.querySelector(
+                    'form#checkoutForm'
+                );
+
+                if (!button || !form) {
+                    throw new Error(
+                        'Place Order button or checkout form missing.'
+                    );
+                }
+
+                button.addEventListener(
+                    'click',
+                    event => {
+                        window.__placeOrderEvents.push({
+                            type: 'click',
+                            trusted: event.isTrusted
+                        });
+                    },
+                    true
+                );
+
+                form.addEventListener(
+                    'submit',
+                    event => {
+                        window.__placeOrderEvents.push({
+                            type: 'submit',
+                            trusted: event.isTrusted
+                        });
+                    },
+                    true
+                );
+            }
+        """)
+
+        # --------------------------------------------------
+        # 4. Click Place Order exactly once
+        # --------------------------------------------------
+
+        self._step(
+            "Submitting final order using browser interaction"
+        )
+
+        place_order.scroll_into_view_if_needed()
+
+        # Do not retry this click automatically.
+        place_order.click(timeout=15000)
+
+        self._step("Place Order click completed")
+
+        self.page.wait_for_timeout(2000)
+
+        try:
+            event_results = self.page.evaluate(
+                "() => window.__placeOrderEvents || []"
+            )
+        except Exception:
+            # The page may have navigated and replaced its document.
+            event_results = ["Original document no longer available"]
+
+        self._step(
+            f"Place Order browser events: {event_results}"
+        )
+
+        self._step(
+            f"URL after Place Order: {self.page.url}"
+        )
+
+        # --------------------------------------------------
+        # 5. Wait for final confirmation and Order ID
+        # --------------------------------------------------
+
+        confirmation_patterns = [
+            r"Thank\s+you",
+            r"Close\s+Call",
+            r"order\s+(?:successfully\s+)?placed",
+            r"order\s+confirmation"
+        ]
+
+        order_id_patterns = [
+            (
+                r"\b(?:your\s+)?order\s+"
+                r"(?:id|number)\s*(?:is\s*)?[:#]?\s*"
+                r"([A-Z0-9][A-Z0-9-]{5,})\b"
+            ),
+            (
+                r"\bconfirmation\s+"
+                r"(?:id|number)\s*(?:is\s*)?[:#]?\s*"
+                r"([A-Z0-9][A-Z0-9-]{5,})\b"
+            )
+        ]
+
+        confirmation_page = None
+        confirmation_frame = None
+        confirmation_text = ""
+        portal_order_id = None
+
+        self._step(
+            "Waiting for final portal confirmation and generated Order ID"
+        )
+
+        for attempt in range(60):
+
+            pages = list(self.page.context.pages)
+
+            for current_page in pages:
+
+                for current_frame in current_page.frames:
+
+                    try:
+                        body_text = current_frame.locator(
+                            "body"
+                        ).inner_text(timeout=1500)
+
+                        if not body_text:
+                            continue
+
+                        has_confirmation = any(
+                            re.search(
+                                pattern,
+                                body_text,
+                                re.I
+                            )
+                            for pattern in confirmation_patterns
+                        )
+
+                        extracted_id = None
+
+                        for pattern in order_id_patterns:
+
+                            match = re.search(
+                                pattern,
+                                body_text,
+                                re.I
+                            )
+
+                            if match:
+                                extracted_id = match.group(1)
+                                break
+
+                        # Both conditions must exist in the same frame.
+                        if has_confirmation and extracted_id:
+
+                            confirmation_page = current_page
+                            confirmation_frame = current_frame
+                            confirmation_text = body_text
+                            portal_order_id = extracted_id
+
+                            break
+
+                    except Exception:
+                        continue
+
+                if confirmation_page and portal_order_id:
+                    break
+
+            if confirmation_page and portal_order_id:
+                break
+
+            self.page.wait_for_timeout(1000)
+
+        # --------------------------------------------------
+        # 6. Do not report success without the portal ID
+        # --------------------------------------------------
+
+        if not confirmation_page or not portal_order_id:
+
+            diagnostic_pages = []
+
+            for current_page in self.page.context.pages:
+
+                page_info = {
+                    "url": current_page.url,
+                    "frames": []
+                }
+
+                for current_frame in current_page.frames:
+
+                    try:
+                        text_content = current_frame.locator(
+                            "body"
+                        ).inner_text(timeout=1000)
+
+                        page_info["frames"].append({
+                            "url": current_frame.url,
+                            "confirmation_detected": any(
+                                re.search(
+                                    pattern,
+                                    text_content,
+                                    re.I
+                                )
+                                for pattern in confirmation_patterns
+                            ),
+                            "order_id_detected": any(
+                                re.search(
+                                    pattern,
+                                    text_content,
+                                    re.I
+                                )
+                                for pattern in order_id_patterns
+                            )
+                        })
+
+                    except Exception:
+                        continue
+
+                diagnostic_pages.append(page_info)
+
+            self._step(
+                f"Final submission diagnostics: {diagnostic_pages}"
+            )
+
+            raise RuntimeError(
+                "Final order verification incomplete. "
+                f"Portal Order ID: {portal_order_id}. "
+                f"Current URL: {self.page.url}. "
+                "The order may have been submitted, but final "
+                "confirmation was not verified. Check the portal "
+                "before attempting another submission."
+            )
+
+        # --------------------------------------------------
+        # 7. Confirm successful order placement
+        # --------------------------------------------------
+
+        self._step(
+            "Final confirmation page detected"
+        )
+
+        self._step(
+            f"Portal order successfully placed. "
+            f"Order ID: {portal_order_id}"
+        )
+
+        return {
+            "status": "ORDER_PLACED",
+            "portal_order_id": portal_order_id,
+            "confirmation_message": (
+                "Final confirmation received. "
+                "Portal order successfully placed."
+            ),
+            "current_url": confirmation_page.url,
+            "steps": self.steps,
+            "screenshot": None
+        }
+
+
+
+
+
 
     def _checkout_and_account(
         self,
@@ -915,6 +1266,33 @@ class BrowserService:
         # 1. Verify agent is speaking to the account holder.
         verified = 'Yes' if q['speaking_to_account_holder'] else 'No'
 
+        # Diagnostic: inspect radio buttons on the account-holder page.
+        # This intentionally excludes customer field values.
+        radio_details = frame.locator(
+            'input[type="radio"]'
+        ).evaluate_all("""
+            elements => elements.map((el, index) => ({
+                index: index,
+                name: el.name,
+                value: el.value,
+                id: el.id,
+                checked: el.checked,
+                visible: !!(
+                    el.offsetWidth ||
+                    el.offsetHeight ||
+                    el.getClientRects().length
+                ),
+                labels: Array.from(el.labels || [])
+                    .map(label => label.innerText.trim()),
+                parentText: (
+                    el.parentElement?.innerText || ''
+                ).trim().slice(0, 200)
+            }))
+        """)
+
+        print("\\n[ACCOUNT HOLDER RADIO DIAGNOSTIC]")
+        print(json.dumps(radio_details, indent=2))
+
         self._choose_radio_by_label(
             frame, 'verified', rf'^{verified}$'
         )
@@ -997,7 +1375,7 @@ class BrowserService:
         )
 
         
-                # 5. Step 2 – EZ-Enroll disclosures.
+            # 5. Step 2 – EZ-Enroll disclosures.
         # The current portal displays TWO Read checkboxes when EZ-Enroll = Yes.
         # Do not expect three checkboxes based on the number of API acknowledgements.
 
@@ -1431,125 +1809,88 @@ class BrowserService:
             f'Installation navigation decision: EZ-Enroll={q.get("ez_enroll")}'
         )
 
+        
         if not ez_enroll:
+            # Step 3: Confirm Installation
+            self._step("Case 1: Confirm Standard Shipping installation")
 
-            # CASE 1: EZ-Enroll NO
-            # The portal uses Forward to proceed to Step 4.
-
-            self._step('Case 1: Looking for installation Forward button')
-
-            forward = frame.locator(
-                'input[type="button"][value*="Forward"], '
-                'input[type="submit"][value*="Forward"], '
-                'button:has-text("Forward")'
-            ).last
-
-            forward.wait_for(
-                state='visible',
-                timeout=20000
+            confirm = frame.locator(
+                'input.cbtn[value="Confirm Installation >"]'
             )
 
-            if not forward.is_enabled():
-                raise RuntimeError(
-                    'Case 1 installation Forward button is disabled.'
-                )
+            confirm.wait_for(state="visible", timeout=20000)
 
-            self._step('Case 1: Installation Forward button found')
+            if not confirm.is_enabled():
+                raise RuntimeError("Confirm Installation button is disabled.")
+
+            self._human_click(confirm)
+
+            self._step("Case 1: Confirm Installation clicked")
+
+            # Forward appears after Confirm Installation
+            forward = frame.locator(
+                'input[type="button"][value*="Forward"]:visible'
+            ).last
+
+            forward.wait_for(state="visible", timeout=20000)
+
+            if not forward.is_enabled():
+                raise RuntimeError("Step 3 Forward button is disabled.")
 
             self._human_click(forward)
 
-            self._step('Case 1: Installation Forward clicked')
+            self._step("Case 1: Forward clicked; waiting for Step 4")
 
-            # Wait for Step 4 Authorization.
+            # Step 4: Authorization
             frame.get_by_text(
-                'ORDER REVIEW',
+                "ORDER REVIEW",
                 exact=True
-            ).wait_for(
-                state='visible',
-                timeout=30000
-            )
+            ).wait_for(state="visible", timeout=30000)
 
-            self._step(
-                'Case 1 Step 4 Authorization page loaded'
-            )
+            self._step("Case 1: Step 4 Authorization page loaded")
 
-            # Check the Step 4 Read checkbox.
-            authorization_checkboxes = frame.locator(
+            # Acknowledge the single visible Read checkbox
+            read_checkbox = frame.locator(
                 'input[type="checkbox"]:visible'
             )
 
-            if authorization_checkboxes.count() != 1:
+            if read_checkbox.count() != 1:
                 raise RuntimeError(
-                    'Expected exactly one Step 4 Read checkbox, '
-                    f'found {authorization_checkboxes.count()}.'
+                    f"Expected one visible Step 4 Read checkbox, "
+                    f"found {read_checkbox.count()}."
                 )
 
-            authorization_read = authorization_checkboxes.first
+            if not read_checkbox.is_checked():
+                self._human_check(read_checkbox)
 
-            if not authorization_read.is_checked():
-                self._human_check(authorization_read)
+            self._step("Case 1: Read checkbox acknowledged")
 
-            if not authorization_read.is_checked():
-                raise RuntimeError(
-                    'Case 1 Step 4 Read checkbox was not checked.'
-                )
-
-            self._step(
-                'Case 1 Step 4 Read checkbox verified'
-            )
-
-            # Submit Case 1 order.
+            # Submit the order
             submit_order = frame.get_by_role(
-                'button',
-                name=re.compile(r'^Submit Order$', re.I)
+                "button",
+                name="Submit Order",
+                exact=True
             )
 
             if submit_order.count() == 0:
                 submit_order = frame.locator(
-                    'input[type="button"][value="Submit Order"], '
-                    'input[type="submit"][value="Submit Order"]'
+                    'input[type="button"][value="Submit Order"]:visible'
                 )
 
-            if (
-                submit_order.count() != 1
-                or not submit_order.is_visible()
-                or not submit_order.is_enabled()
-            ):
-                raise RuntimeError(
-                    'Case 1 Submit Order button was not found '
-                    'uniquely or is disabled.'
-                )
-
-            self._step('Submitting Case 1 order')
+            submit_order.wait_for(state="visible", timeout=20000)
             self._human_click(submit_order)
 
-            # Wait for Order Summary.
-            try:
-                frame.get_by_text(
-                    re.compile(r'ORDER SUMMARY', re.I)
-                ).wait_for(
-                    state='visible',
-                    timeout=60000
-                )
-            except PlaywrightTimeoutError:
-                self.page.wait_for_url(
-                    re.compile(r'.*/order-summary/.*'),
-                    timeout=60000
-                )
+            # Complete final submission and extract portal Order ID.
+            self._step("Case 1: Order Summary reached")
 
-            self._step('Case 1 Final Order Summary loaded')
+            result = self._place_order_and_get_portal_id(frame)
 
-            return {
-                'status': 'ORDER_SUMMARY_REACHED',
-                'current_url': self.page.url,
-                'steps': self.steps,
-                'screenshot': None,
-                'message': (
-                    'Case 1 simulator order submitted successfully. '
-                    'Credit check approved, Step 4 authorization '
-                    'completed, and Order Summary reached.'
-                )
-            }
+            result["message"] = (
+                "Case 1 order successfully placed. "
+                "Portal confirmation and Order ID received."
+            )
+
+            return result
 
         else:
 
@@ -1794,32 +2135,27 @@ class BrowserService:
             self._step('Submitting authorized order')
             self._human_click(submit_order)
 
-            # Wait for the final Order Summary.
-            try:
-                frame.get_by_text(
-                    re.compile(r'ORDER SUMMARY', re.I)
-                ).wait_for(
-                    state='visible',
-                    timeout=60000
-                )
-            except PlaywrightTimeoutError:
-                self.page.wait_for_url(
-                    re.compile(r'.*/order-summary/.*'),
-                    timeout=60000
-                )
+            # Wait for the main page to navigate to Order Summary.
+            # The checkout iframe is replaced during this navigation.
+            self._step("Waiting for Case 2 Order Summary navigation")
 
-            self._step('Final Order Summary page loaded')
+            self.page.wait_for_url(
+                re.compile(r".*/order-summary(?:/|\?).*"),
+                timeout=60000
+            )
 
-            return {
-                'status': 'ORDER_SUMMARY_REACHED',
-                'current_url': self.page.url,
-                'steps': self.steps,
-                'screenshot': None,
-                'message': (
-                    'Case 2 simulator order submitted successfully. '
-                    'Final Order Summary reached.'
-                )
-            }
+            self._step(
+                f"Case 2 Order Summary page loaded: {self.page.url}"
+            )
+
+            result = self._place_order_and_get_portal_id(frame)
+
+            result["message"] = (
+                "Case 2 order successfully placed. "
+                "Portal confirmation and Order ID received."
+            )
+
+            return result
 
 
         self._step(
@@ -2225,33 +2561,37 @@ class BrowserService:
         # 11. WAIT FOR FINAL ORDER SUMMARY
         # -------------------------------------------------
 
-        try:
-            frame.get_by_text(
-                re.compile(r'ORDER SUMMARY', re.I)
-            ).wait_for(
-                state='visible',
-                timeout=60000
-            )
-        except PlaywrightTimeoutError:
-            self.page.wait_for_url(
-                re.compile(r'.*/order-summary/.*'),
-                timeout=60000
-            )
+        # -------------------------------------------------
+        # 11. WAIT FOR FINAL ORDER SUMMARY
+        # -------------------------------------------------
 
-        self._step('Final Order Summary page loaded')
+        self._step(
+            "Waiting for Case 2 Order Summary navigation"
+        )
 
-        self._screenshot('full_flow_06_order_summary')
+        # The checkout iframe is detached when the portal
+        # navigates to the parent-page Order Summary.
+        # Always wait using self.page, never the old frame.
 
-        return {
-            'status': 'ORDER_SUMMARY_REACHED',
-            'current_url': self.page.url,
-            'steps': self.steps,
-            'screenshot': None,
-            'message': (
-                'Case 2 simulator order submitted successfully. '
-                'Step 4 authorization completed and final Order Summary reached.'
-            )
-        }
+        self.page.wait_for_url(
+            re.compile(r".*/order-summary(?:/|\?).*"),
+            timeout=60000
+        )
+
+        self._step(
+            f"Case 2 Order Summary page loaded: {self.page.url}"
+        )
+
+        # Continue to the final Place Order page action.
+        result = self._place_order_and_get_portal_id(frame)
+
+        result["message"] = (
+            "Case 2 order successfully placed. "
+            "Payment and authorization completed; portal Order ID received."
+        )
+
+        return result
+
 
 
     def run_full_order(
@@ -2263,10 +2603,31 @@ class BrowserService:
     ):
         with sync_playwright() as p:
             self.playwright = p
-            self.browser = p.chromium.launch(headless=False)
-            self.context = self.browser.new_context(viewport={'width':1600,'height':900})
+            
+            self.browser = p.chromium.launch(
+                headless=False,
+                args=[
+                    "--window-size=1580,600",
+                    "--window-position=0,0"
+                ]
+            )
+
+            self.context = self.browser.new_context(
+                viewport={
+                "width": 1580,
+                "height": 800
+                }
+            )
+
+
             self.page = self.context.new_page()
-            self._sensitive_data_active = (identity_data is not None or payment_data is not None or cvv is not None)
+
+            self._sensitive_data_active = (
+                identity_data is not None
+                or payment_data is not None
+                or cvv is not None
+            )
+
             try:
                 self._login_and_start()
                 self._fill_basic_information(data)
@@ -2281,8 +2642,10 @@ class BrowserService:
                 self._run_succeeded = True
                 return result
             except Exception as exc:
-                try: self._screenshot('full_flow_error')
-                except Exception: pass
+                try:
+                    self._screenshot('full_flow_error')
+                except Exception:
+                    pass
                 print('[AUTOMATION] Browser will remain open for 120 seconds for inspection.')
                 try:
                     self.page.wait_for_timeout(120000)
@@ -2296,7 +2659,7 @@ class BrowserService:
                     "screenshot": (
                         None if self._sensitive_data_active
                         else str(DATA_DIR / "full_flow_error.png")
-                        )
+                    )
                 }
             finally:
                 # On failure keep the visible browser open briefly so the portal state

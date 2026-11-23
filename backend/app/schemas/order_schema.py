@@ -275,11 +275,19 @@ class OrderCreateSchema(BaseModel):
 
 
 
+
 class OrderResponseSchema(StrictBaseModel):
     order_id: str
     status: str
     message: str
     automation_status: str
+
+    portal_order_id: str | None = None
+    current_url: str | None = None
+    steps: list[str] = Field(default_factory=list)
+    error: str | None = None
+    screenshot: str | None = None
+
 
 
 class OrderStatusSchema(StrictBaseModel):
