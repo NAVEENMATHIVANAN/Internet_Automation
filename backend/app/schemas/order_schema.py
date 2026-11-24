@@ -210,20 +210,14 @@ class EncryptedPaymentSchema(StrictBaseModel):
     encrypted_expiry_year: str = Field(min_length=1, max_length=2000)
 
 
-class OrderCreateSchema(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
+class OrderCreateSchema(StrictBaseModel):
+    """Non-sensitive order data only. Sensitive fields are forbidden here."""
     customer: CustomerSchema
     service_address: ServiceAddressSchema
     order: OrderSchema
     qualification: QualificationSchema
     installation: InstallationSchema
     disclosures: DisclosureSchema
-
-    encrypted_identity: EncryptedIdentitySchema | None = None
-    encrypted_payment: EncryptedPaymentSchema | None = None
-    # Encrypted CVV is transient input only; it must never be persisted.
-    encrypted_cvv: str | None = Field(default=None, min_length=1, max_length=2000)
 
     @model_validator(mode="after")
     def validate_order_data(self):
@@ -239,41 +233,14 @@ class OrderCreateSchema(BaseModel):
         ):
             raise ValueError("Shipping address is required")
 
-        if self.qualification.ez_enroll:
-            if self.encrypted_identity is not None:
-                raise ValueError(
-                    "Identity details must not be supplied when EZ-Enroll is enabled."
-                )
-
-            if self.encrypted_payment is None:
-                raise ValueError(
-                    "Encrypted card details are required when EZ-Enroll is enabled."
-                )
-
-            if not self.encrypted_cvv:
-                raise ValueError(
-                    "Encrypted CVV is required when EZ-Enroll is enabled."
-                )
-
-        else:
-            if self.encrypted_identity is None:
-                raise ValueError(
-                    "Encrypted SSN and DOB are required when EZ-Enroll is disabled."
-                )
-
-            if self.encrypted_payment is not None:
-                raise ValueError(
-                    "Card details must not be supplied when EZ-Enroll is disabled."
-                )
-
-            if self.encrypted_cvv is not None:
-                raise ValueError(
-                    "CVV must not be supplied when EZ-Enroll is disabled."
-                )
-
         return self
 
 
+class AutomationRunSchema(StrictBaseModel):
+    """Encrypted sensitive data supplied only when automation is started."""
+    encrypted_identity: EncryptedIdentitySchema | None = None
+    encrypted_payment: EncryptedPaymentSchema | None = None
+    encrypted_cvv: str | None = Field(default=None, min_length=1, max_length=2000)
 
 
 class OrderResponseSchema(StrictBaseModel):
@@ -281,13 +248,11 @@ class OrderResponseSchema(StrictBaseModel):
     status: str
     message: str
     automation_status: str
-
     portal_order_id: str | None = None
     current_url: str | None = None
     steps: list[str] = Field(default_factory=list)
     error: str | None = None
     screenshot: str | None = None
-
 
 
 class OrderStatusSchema(StrictBaseModel):
