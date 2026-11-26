@@ -73,6 +73,12 @@ class ServiceAddressSchema(StrictBaseModel):
 
 class OrderSchema(StrictBaseModel):
     lead_id: str = Field(min_length=1, max_length=100)
+    @field_validator("lead_id")
+    @classmethod
+    def validate_lead_id(cls, value):
+        if not re.fullmatch(r"\d{10}", value):
+            raise ValueError("Call ID must contain exactly 10 digits")
+        return value
 
     provider: str
     customer_type: Literal["NEW", "TRANSFER"]
@@ -242,6 +248,17 @@ class AutomationRunSchema(StrictBaseModel):
     encrypted_payment: EncryptedPaymentSchema | None = None
     encrypted_cvv: str | None = Field(default=None, min_length=1, max_length=2000)
 
+class AddressSuggestionSchema(StrictBaseModel):
+    suggestion_id: str
+    address: str
+
+
+class AddressSelectionSchema(StrictBaseModel):
+    suggestion_id: str = Field(min_length=1, max_length=50)
+
+
+class ProviderSelectionSchema(StrictBaseModel):
+    provider: str = Field(min_length=1, max_length=100)
 
 class OrderResponseSchema(StrictBaseModel):
     order_id: str
@@ -253,6 +270,8 @@ class OrderResponseSchema(StrictBaseModel):
     steps: list[str] = Field(default_factory=list)
     error: str | None = None
     screenshot: str | None = None
+    address_suggestions: list[AddressSuggestionSchema] | None = None
+    available_providers: list[str] | None = None
 
 
 class OrderStatusSchema(StrictBaseModel):
@@ -260,3 +279,5 @@ class OrderStatusSchema(StrictBaseModel):
     status: str
     automation_status: str
     created_at: str | None = None
+    address_suggestions: list[AddressSuggestionSchema] | None = None
+    available_providers: list[str] | None = None

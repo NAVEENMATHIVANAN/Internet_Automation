@@ -13,6 +13,8 @@ DATA_DIR.mkdir(exist_ok=True)
 STATE_NAMES = {
 'AL':'Alabama','AK':'Alaska','AZ':'Arizona','AR':'Arkansas','CA':'California','CO':'Colorado','CT':'Connecticut','DE':'Delaware','DC':'District Of Columbia','FL':'Florida','GA':'Georgia','HI':'Hawaii','ID':'Idaho','IL':'Illinois','IN':'Indiana','IA':'Iowa','KS':'Kansas','KY':'Kentucky','LA':'Louisiana','ME':'Maine','MD':'Maryland','MA':'Massachusetts','MI':'Michigan','MN':'Minnesota','MS':'Mississippi','MO':'Missouri','MT':'Montana','NE':'Nebraska','NV':'Nevada','NH':'New Hampshire','NJ':'New Jersey','NM':'New Mexico','NY':'New York','NC':'North Carolina','ND':'North Dakota','OH':'Ohio','OK':'Oklahoma','OR':'Oregon','PA':'Pennsylvania','RI':'Rhode Island','SC':'South Carolina','SD':'South Dakota','TN':'Tennessee','TX':'Texas','UT':'Utah','VT':'Vermont','VA':'Virginia','WA':'Washington','WV':'West Virginia','WI':'Wisconsin','WY':'Wyoming'}
 
+class AddressSelectionDeclined(Exception):
+    pass
 class BrowserService:
     """Full portal workflow runner. Login is entered manually; all later pages are driven from order data."""
     def __init__(self):
@@ -126,7 +128,7 @@ class BrowserService:
         self.page.locator('#forward').click()
         self.page.locator('#firstName').wait_for(state='visible', timeout=60000)
 
-    def _fill_basic_information(self, data: dict[str, Any]):
+    def _fill_basic_information(self, data: dict[str, Any], address_selection_callback=None,):
         
         c, a = data['customer'], data['service_address']
         self._step('Fill Basic Information')
@@ -343,14 +345,190 @@ class BrowserService:
 
             self.page.locator('#datepicker').fill(move_date)
 
+        
         self._screenshot('full_flow_01_basic_information')
         self._step('Submit service address for portal validation')
         self._review_pause('Basic Information')
+
         self.page.locator('#basicInfoForward').click()
-        self.page.locator('p.green').filter(has_text='Proceed to the next screen').wait_for(state='visible', timeout=60000)
-        self._review_pause('Address Validation')
-        self.page.locator('#addressFoundForward').click()
-        self.page.locator('input[type="radio"][value="New"],input[type="radio"][value="Transfer"]').first.wait_for(state='visible', timeout=60000)
+
+        # Wait for either the normal address confirmation or the
+        # Address Not Matched suggestion popup.
+        self.page.wait_for_function(
+            """() => {
+                const dialog = document.querySelector(
+                    'div[data-ac-notice].ui-dialog-content'
+                );
+
+                const popupVisible = dialog &&
+                    getComputedStyle(dialog).display !== 'none' &&
+                    dialog.getClientRects().length > 0;
+
+                const normalMessage = [
+                    ...document.querySelectorAll('p.green')
+                ].some(element =>
+                    element.innerText.includes('Proceed to the next screen')
+                );
+
+                return popupVisible || normalMessage;
+            }""",
+            timeout=60000
+        )
+
+        dialog = self.page.locator(
+            'div[data-ac-notice].ui-dialog-content'
+        )
+
+        if dialog.is_visible():
+            self._step('Address mismatch detected')
+            suggestions = self._get_address_suggestions()
+
+            if address_selection_callback is None:
+                raise RuntimeError(
+                    'Address selection is required, but no selection handler exists.'
+                )
+
+            # This blocks the browser worker, not the API selection endpoint.
+            selected_id = address_selection_callback(suggestions)
+
+            if selected_id == 'NONE_OF_THESE':
+                raise AddressSelectionDeclined(
+                    'Caller rejected all suggested addresses.'
+                )
+
+            selected = next(
+                (
+                    item for item in suggestions
+                    if item['suggestion_id'] == selected_id
+                ),
+                None
+            )
+
+            if selected is None:
+                raise RuntimeError('Invalid address selection returned.')
+
+            self._step(
+                f"Caller selected address: {selected['suggestion_id']}"
+            )
+            self._select_address_suggestion(selected['address'])
+
+            # The selected suggestion directly navigates to Customer Type.
+            self.page.locator(
+                'input[type="radio"][value="New"],'
+                'input[type="radio"][value="Transfer"]'
+            ).first.wait_for(
+                state='visible',
+                timeout=60000
+            )
+
+        else:
+            # Preserve the existing successful address-validation workflow.
+            self._step('Address Matched')
+
+            self.page.locator('p.green').filter(
+                has_text='Proceed to the next screen'
+            ).wait_for(
+                state='visible',
+                timeout=60000
+            )
+
+            self._review_pause('Address Validation')
+
+            self.page.locator('#addressFoundForward').click()
+
+            self.page.locator(
+                'input[type="radio"][value="New"],'
+                'input[type="radio"][value="Transfer"]'
+            ).first.wait_for(
+                state='visible',
+                timeout=60000
+            )
+
+
+    
+    def _get_address_suggestions(self):
+        """Extract address choices from the portal's clarification popup."""
+
+        dialog = self.page.locator(
+            'div[data-ac-notice].ui-dialog-content'
+        )
+
+        dialog.wait_for(
+            state="visible",
+            timeout=15000
+        )
+
+        buttons = dialog.locator(
+            'input[type="button"]'
+        )
+
+        suggestions = []
+
+        for index in range(buttons.count()):
+            button = buttons.nth(index)
+
+            if not button.is_visible():
+                continue
+
+            address = (button.get_attribute("value") or "").strip()
+
+            if not address:
+                continue
+
+            if address.casefold() == "none of these":
+                continue
+
+            suggestions.append({
+                "suggestion_id": f"address_{index + 1}",
+                "address": address
+            })
+
+        if not suggestions:
+            raise RuntimeError(
+                "Address clarification popup appeared, "
+                "but no address suggestions were found."
+            )
+
+        self._step(
+            f"Captured {len(suggestions)} address suggestions"
+        )
+
+        return suggestions
+
+    
+    def _select_address_suggestion(self, selected_address: str):
+        """Select the exact address chosen by the caller."""
+
+        dialog = self.page.locator(
+            'div[data-ac-notice].ui-dialog-content'
+        )
+        dialog.wait_for(state="visible", timeout=15000)
+
+        buttons = dialog.locator('input[type="button"]')
+        matching_buttons = []
+        for index in range(buttons.count()):
+            button = buttons.nth(index)
+            if (
+                button.is_visible()
+                and (button.get_attribute("value") or "") == selected_address
+            ):
+                matching_buttons.append(button)
+
+        if not matching_buttons:
+            raise RuntimeError(
+                "The selected address is not available in the portal popup."
+            )
+        if len(matching_buttons) != 1:
+            raise RuntimeError(
+                "Could not uniquely identify the selected address."
+            )
+
+        self._human_click(matching_buttons[0])
+        dialog.wait_for(state="hidden", timeout=15000)
+        self._step(
+            f"Selected and confirmed address: {selected_address}"
+        )
+
 
     
     
@@ -458,10 +636,119 @@ class BrowserService:
 
         print("[SUCCESS] Recommendations page loaded.")
 
+    
+    def _click_selected_provider(self, recommendations_frame, provider_name):
+        provider_text = recommendations_frame.get_by_text(
+            provider_name,
+            exact=True
+        )
+
+        visible_matches = []
+
+        for i in range(provider_text.count()):
+            candidate = provider_text.nth(i)
+
+            if candidate.is_visible():
+                visible_matches.append(candidate)
+
+        if len(visible_matches) != 1:
+            raise RuntimeError(
+                f'Expected exactly one visible "{provider_name}" provider label, '
+                f'but found {len(visible_matches)}.'
+            )
+
+        target = visible_matches[0]
+
+        target_info = target.evaluate("""el => {
+            let node = el;
+            let depth = 0;
+
+            while (node && depth < 8) {
+                const style = window.getComputedStyle(node);
+
+                const actionable =
+                    node.tagName === 'A' ||
+                    node.tagName === 'BUTTON' ||
+                    node.hasAttribute('onclick') ||
+                    node.getAttribute('role') === 'button' ||
+                    node.hasAttribute('tabindex') ||
+                    style.cursor === 'pointer' ||
+                    typeof node.onclick === 'function';
+
+                if (actionable) {
+                    return {
+                        depth,
+                        tag: node.tagName,
+                        id: node.id || '',
+                        className: String(node.className || '')
+                    };
+                }
+
+                node = node.parentElement;
+                depth++;
+            }
+
+            return {depth: 0};
+        }""")
+
+        depth = int(target_info.get('depth', 0))
+
+        if depth:
+            click_target = target.locator(
+                f'xpath=ancestor::*[{depth}]'
+            )
+        else:
+            click_target = target
+
+        self._step(f'Click confirmed provider: {provider_name}')
+        self._human_click(click_target)
+
+    
+    def _detect_available_providers(self, recommendations_frame):
+        """
+        Read provider names from the rendered recommendations insights section.
+        Provider names are discovered from the portal, not from ZIP-specific rules.
+        """
+        import re
+
+        insights = recommendations_frame.locator('#insightsViewDiv')
+        insights.wait_for(state='visible', timeout=30000)
+
+        text = insights.inner_text()
+        matches = re.findall(
+            r'\bProvider[A-Za-z0-9]+\b',
+            text,
+            flags=re.IGNORECASE
+        )
+
+        providers = []
+        seen = set()
+
+        for name in matches:
+            normalized = name.strip()
+            key = normalized.casefold()
+
+            if key not in seen:
+                seen.add(key)
+                providers.append(normalized)
+
+        if not providers:
+            raise RuntimeError(
+                'No provider names were detected in the recommendations insights. '
+                f'Visible insights text: {text[:3000]}'
+            )
+
+        return providers
+
+
 
 
     
-    def _select_provider_and_plan(self, order: dict[str, Any]):
+    def _select_provider_and_plan(
+        self,
+        order: dict[str, Any],
+        provider_selection_callback=None,
+    ):
         self._step('Select available ProviderXX and open its internet catalogue')
 
         # Locate the actual Allconnect Recommendations frame.
@@ -478,70 +765,108 @@ class BrowserService:
                 'Allconnect Recommendations frame was not found.'
             )
 
-        # Locate ProviderXX recommendation card.
-        provider_card = recommendations_frame.locator('#goldTable')
-        provider_card.wait_for(state='visible', timeout=30000)
+                # Detect providers actually displayed by the portal.
+        self._step('Detect available providers')
 
-        self._step('Select ProviderXX recommendation card')
-        self._human_click(provider_card)
+        providers = self._detect_available_providers(
+            recommendations_frame
+        )
 
-        # Check whether the ProviderXX acknowledgement appears.
-        self._step('Check ProviderXX acknowledgement')
+        print(f'[PROVIDERS] Available providers: {providers}')
 
-        yes = self.page.locator('#providerxxYes')
-        products_button = self.page.locator('#ProviderXXProductsButton')
+        if not provider_selection_callback:
+            raise RuntimeError(
+                'Provider selection callback is not configured.'
+            )
 
+        # Pause this browser session until the customer confirms a provider.
+        self._step('Wait for customer provider confirmation')
+
+        selected_provider = provider_selection_callback(providers)
+
+        if not selected_provider:
+            raise RuntimeError('Customer did not select a provider.')
+
+        selected_provider = selected_provider.strip()
+
+        matched_provider = next(
+            (
+                provider for provider in providers
+                if provider.casefold() == selected_provider.casefold()
+            ),
+            None
+        )
+
+        if matched_provider is None:
+            raise RuntimeError(
+                f'Invalid provider selection: {selected_provider}. '
+                f'Available providers: {providers}'
+            )
+
+        self._step(f'Select confirmed provider: {matched_provider}')
+
+        self._click_selected_provider(
+            recommendations_frame,
+            matched_provider
+        )
+
+        # Check whether the ProviderXX acknowledgement is actually displayed.
+        # This is not required for other providers.
+        if matched_provider.casefold() == 'providerxx'.casefold():
+            yes = self.page.locator('#providerxxYes')
+            products_button = self.page.locator(
+                '#ProviderXXProductsButton'
+            )
+
+            try:
+                yes.wait_for(state='visible', timeout=8000)
+            except PlaywrightTimeoutError:
+                pass
+
+            if yes.count() and yes.is_visible():
+                print(
+                    '\n[MANUAL REVIEW REQUIRED]'
+                    '\nReview the ProviderXX commission acknowledgement.'
+                    '\nSelect Yes in the browser only if the authorized '
+                    'operator confirms the acknowledgement.'
+                )
+
+                input(
+                    'After reviewing and selecting Yes in the browser, '
+                    'press ENTER to continue...'
+                )
+
+                if not yes.is_checked():
+                    raise RuntimeError(
+                        'ProviderXX acknowledgement was not confirmed.'
+                    )
+
+                self._human_click(products_button)
+
+        # Confirm that the Internet catalogue has opened.
         details_buttons = self.page.locator(
             'input.ViewDetailsBtn:visible'
         )
 
-        try:
-            yes.wait_for(state='visible', timeout=8000)
-        except PlaywrightTimeoutError:
-            pass
+        if not details_buttons.count():
+            diagnostics = self.page.locator(
+                'button:visible, a:visible, input:visible, '
+                '[role="button"]:visible, [onclick]:visible'
+            ).evaluate_all("""els => els.map(el => ({
+                tag: el.tagName,
+                id: el.id || '',
+                value: el.value || '',
+                text: (el.innerText || el.textContent || '')
+                    .trim().slice(0, 180),
+                className: String(el.className || ''),
+                html: el.outerHTML.slice(0, 1000)
+            }))""")
 
-        if yes.count() and yes.is_visible():
-            print(
-                '\n[MANUAL REVIEW REQUIRED]'
-                '\nReview the ProviderXX commission acknowledgement.'
-                '\nSelect Yes in the browser only if the authorized operator '
-                'confirms the acknowledgement.'
+            raise RuntimeError(
+                f'{matched_provider} was selected, but the Internet '
+                'catalogue did not appear. '
+                f'Visible controls: {diagnostics}'
             )
-
-            input(
-                'After reviewing and selecting Yes in the browser, '
-                'press ENTER to continue...'
-            )
-
-            if not yes.is_checked():
-                raise RuntimeError(
-                    'ProviderXX acknowledgement was not confirmed.'
-                )
-
-            self._human_click(products_button)
-
-        else:
-            # Continue only if the catalogue is actually visible.
-            if not details_buttons.count():
-                diagnostics = self.page.locator(
-                    'button:visible, a:visible, input:visible, '
-                    '[role="button"]:visible, [onclick]:visible'
-                ).evaluate_all("""els => els.map(el => ({
-                    tag: el.tagName,
-                    id: el.id || '',
-                    type: el.getAttribute('type') || '',
-                    value: el.value || '',
-                    text: (el.innerText || el.textContent || '').trim().slice(0, 180),
-                    className: String(el.className || ''),
-                    onclick: el.getAttribute('onclick') || '',
-                    html: el.outerHTML.slice(0, 1200)
-                }))""")
-
-                raise RuntimeError(
-                    'ProviderXX card was clicked, but neither the '
-                    'confirmation dialog nor Internet catalogue appeared. '
-                    f'Visible controls: {diagnostics}'
-                )
 
         # Open Internet tab if required.
         if not self.page.locator('input.ViewDetailsBtn:visible').count():
@@ -2594,16 +2919,19 @@ class BrowserService:
 
 
 
+    
     def run_full_order(
         self,
         data: dict[str, Any],
         identity_data: dict[str, str] | None = None,
         payment_data: dict[str, str] | None = None,
-        cvv: str | None = None
+        cvv: str | None = None,
+        address_selection_callback=None,
+        provider_selection_callback=None,
     ):
         with sync_playwright() as p:
             self.playwright = p
-            
+
             self.browser = p.chromium.launch(
                 headless=False,
                 args=[
@@ -2614,11 +2942,10 @@ class BrowserService:
 
             self.context = self.browser.new_context(
                 viewport={
-                "width": 1580,
-                "height": 800
+                    "width": 1580,
+                    "height": 800
                 }
             )
-
 
             self.page = self.context.new_page()
 
@@ -2630,27 +2957,40 @@ class BrowserService:
 
             try:
                 self._login_and_start()
-                self._fill_basic_information(data)
+
+                self._fill_basic_information(
+                    data,
+                    address_selection_callback=address_selection_callback,
+                )
+
                 self._select_customer_type(data['order'])
-                self._select_provider_and_plan(data['order'])
+
+                self._select_provider_and_plan(
+                    data['order'],
+                    provider_selection_callback=provider_selection_callback,
+                )
+
                 result = self._checkout_and_account(
                     data,
                     identity_data=identity_data,
                     payment_data=payment_data,
                     cvv=cvv
                 )
+
                 self._run_succeeded = True
                 return result
+
             except Exception as exc:
-                try:
-                    self._screenshot('full_flow_error')
-                except Exception:
-                    pass
-                print('[AUTOMATION] Browser will remain open for 120 seconds for inspection.')
-                try:
-                    self.page.wait_for_timeout(120000)
-                except Exception:
-                    pass
+                if not isinstance(exc, AddressSelectionDeclined):
+                    print(
+                        '[AUTOMATION] Browser will remain open for '
+                        '120 seconds for inspection.'
+                    )
+                    try:
+                        self.page.wait_for_timeout(120000)
+                    except Exception:
+                        pass
+
                 return {
                     "status": "MANUAL_REVIEW_REQUIRED",
                     "error": str(exc),
@@ -2661,10 +3001,13 @@ class BrowserService:
                         else str(DATA_DIR / "full_flow_error.png")
                     )
                 }
+
             finally:
-                # On failure keep the visible browser open briefly so the portal state
-                # can be inspected. Successful runs close normally.
-                if self.context and self.steps and getattr(self, '_run_succeeded', False):
+                if (
+                    self.context
+                    and self.steps
+                    and getattr(self, '_run_succeeded', False)
+                ):
                     self.context.close()
                     if self.browser:
                         self.browser.close()

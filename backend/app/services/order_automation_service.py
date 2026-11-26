@@ -56,7 +56,13 @@ def decrypt_and_validate_payment(encrypted_payment: dict, encrypted_cvv: str):
         raise ValueError("Encrypted payment details could not be validated.") from None
 
 
-def execute_order_automation(db, order, run_request) -> dict:
+def execute_order_automation(
+    db,
+    order,
+    run_request,
+    address_selection_callback=None,
+    provider_selection_callback=None,
+) -> dict:
     identity_data = None
     payment_data = None
     ssn = dob = cvv = None
@@ -101,6 +107,8 @@ def execute_order_automation(db, order, run_request) -> dict:
         result = BrowserService().run_full_order(
             payload, identity_data=identity_data,
             payment_data=payment_data, cvv=cvv,
+            address_selection_callback=address_selection_callback,
+            provider_selection_callback=provider_selection_callback,
         )
         if not isinstance(result, dict):
             raise RuntimeError("Browser automation returned an invalid result.")
